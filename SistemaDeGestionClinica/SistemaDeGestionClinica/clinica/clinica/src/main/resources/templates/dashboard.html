@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel del Doctor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f2f7ff;
+        }
+
+        /* Encabezado */
+        header {
+            background: #0077b6;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Contenedor principal con fondo */
+        main {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 60px 40px;
+            background: url('/Others/fondo.jpg') no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Capa semitransparente sobre la imagen */
+        main::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.85); 
+            z-index: 0;
+        }
+
+        /* Las tarjetas encima del fondo */
+        .card {
+            background: white;
+            width: 220px;
+            height: 150px;
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            position: relative;
+            z-index: 1; 
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+        }
+
+        a {
+            text-decoration: none;
+            color: #0077b6;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1 th:if="${doctor != null}"
+        th:text="${'Bienvenido, Dr. ' + #strings.defaultString(doctor.nombre,'') + ' ' + #strings.defaultString(doctor.apellido,'')}">
+        Bienvenido, Doctor
+    </h1>
+    <h1 th:unless="${doctor != null}">Bienvenido, Doctor</h1>
+    <p>Panel principal</p>
+</header>
+
+<main>
+    <div class="card">
+        <h2>👨‍⚕️ Perfil</h2>
+        <a th:href="@{/doctor}">Ver mi información</a>
+    </div>
+
+    <div class="card">
+        <h2>👥 Pacientes</h2>
+        <a th:href="@{/pacientes/vista}">Ver / Crear Pacientes</a>
+    </div>
+
+    <div class="card">
+        <h2>📅 Citas</h2>
+        <a th:href="@{/citas/vista}">Ver / Asignar Citas</a>
+    </div>
+
+    <div class="card">
+        <h2>📋 Historial Médico</h2>
+        <a th:href="@{/historiales/vista}">Consultar Historial</a>
+    </div>
+</main>
+
+</body>
+</html>
