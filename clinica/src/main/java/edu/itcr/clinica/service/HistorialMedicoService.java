@@ -52,7 +52,7 @@ public class HistorialMedicoService {
     /** Devuelve los historiales de un paciente, del más reciente al más antiguo. */
     @Transactional(readOnly = true)
     public List<HistorialMedico> listarPorPaciente(Long idPaciente) {
-        return historialRepo.findByPaciente_IdPacienteOrderByFechaConsultaDesc(idPaciente);
+        return historialRepo.findHistorialesRealesPorPaciente(idPaciente);
     }
 
     /** Busca el historial asociado a una cita específica. */
