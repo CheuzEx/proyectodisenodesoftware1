@@ -8,12 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * API REST para la entidad HistorialMedico.
- * Base path: /historiales
- *
- * Las vistas Thymeleaf asociadas se encuentran en VistaController.
- */
+// API REST para la entidad HistorialMedico.
+// Base path: /historiales
 @RestController
 @RequestMapping("/api/historiales")
 @CrossOrigin
@@ -25,7 +21,7 @@ public class HistorialMedicoController {
         this.historialService = historialService;
     }
 
-    /** DTO público para recibir datos de receta desde el cliente. */
+    // DTO público para recibir datos de receta desde el cliente. 
     public static class RecetaDTO {
         public String  medicamento;
         public String  dosis;
@@ -33,7 +29,7 @@ public class HistorialMedicoController {
         public Integer duracion;
     }
 
-    /** DTO para registrar la atención de una cita. */
+    // DTO para registrar la atención de una cita. 
     public static class RegistrarAtencionRequest {
         public Long            citaId;
         public String          diagnostico;
@@ -42,25 +38,29 @@ public class HistorialMedicoController {
         public LocalDate       fechaConsulta;
     }
 
-    /** GET /historiales — Lista todos los historiales. */
+    // GET /historiales 
+    // Lista todos los historiales.
     @GetMapping
     public List<HistorialMedico> listar() {
         return historialService.listar();
     }
 
-    /** GET /historiales/por-paciente/{idPaciente} — Historiales de un paciente. */
+    // GET /historiales/por-paciente/{idPaciente} 
+    // Historiales de un paciente. 
     @GetMapping("/por-paciente/{idPaciente}")
     public List<HistorialMedico> listarPorPaciente(@PathVariable Long idPaciente) {
         return historialService.listarPorPaciente(idPaciente);
     }
 
-    /** GET /historiales/por-cita/{idCita} — Historial asociado a una cita. */
+    // GET /historiales/por-cita/{idCita} 
+    // Historial asociado a una cita. 
     @GetMapping("/por-cita/{idCita}")
     public HistorialMedico buscarPorCita(@PathVariable Long idCita) {
         return historialService.buscarPorCita(idCita);
     }
 
-    /** POST /historiales/registrar — Registra la atención de una cita con diagnóstico y recetas. */
+    // POST /historiales/registrar 
+    //Registra la atención de una cita con diagnóstico y recetas. 
     @PostMapping("/registrar")
     @ResponseStatus(HttpStatus.CREATED)
     public HistorialMedico registrar(@RequestBody RegistrarAtencionRequest req) {
