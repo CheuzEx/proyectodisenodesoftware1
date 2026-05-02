@@ -18,7 +18,7 @@ public class EspecialidadService {
         this.especialidadRepo = especialidadRepo;
     }
 
-    /** Devuelve todas las especialidades ordenadas por nombre. */
+    // Devuelve todas las especialidades ordenadas por nombre. 
     @Transactional(readOnly = true)
     public List<Especialidad> listar() {
         return especialidadRepo.findAll().stream()
@@ -27,7 +27,7 @@ public class EspecialidadService {
                 .toList();
     }
 
-    /** Busca una especialidad por ID, lanzando 404 si no existe. */
+    // Busca una especialidad por ID, lanzando 404 si no existe. 
     @Transactional(readOnly = true)
     public Especialidad buscarPorId(Long id) {
         return especialidadRepo.findById(id)
@@ -35,10 +35,8 @@ public class EspecialidadService {
                         "Especialidad no encontrada: " + id));
     }
 
-    /**
-     * Crea una especialidad nueva.
-     * Lanza 409 CONFLICT si ya existe una con el mismo nombre (ignorando mayúsculas).
-     */
+    // Crea una especialidad nueva.
+    //Lanza 409 CONFLICT si ya existe una con el mismo nombre (ignorando mayúsculas).
     @Transactional
     public Especialidad crear(String nombre) {
         String clean = validarNombre(nombre);
@@ -49,10 +47,8 @@ public class EspecialidadService {
         return especialidadRepo.save(new Especialidad(clean));
     }
 
-    /**
-     * Actualiza el nombre de una especialidad existente.
-     * Lanza 409 si el nuevo nombre ya está en uso por otra especialidad.
-     */
+    // Actualiza el nombre de una especialidad existente.
+    // Lanza 409 si el nuevo nombre ya está en uso por otra especialidad.
     @Transactional
     public Especialidad actualizar(Long id, String nuevoNombre) {
         String clean        = validarNombre(nuevoNombre);
@@ -67,17 +63,14 @@ public class EspecialidadService {
         return especialidadRepo.save(existente);
     }
 
-    /** Elimina una especialidad por ID. */
+    // Elimina una especialidad por ID. 
     @Transactional
     public void eliminar(Long id) {
         buscarPorId(id); // valida que exista antes de borrar
         especialidadRepo.deleteById(id);
     }
 
-    // -----------------------------------------------------------------------
     // Helper interno
-    // -----------------------------------------------------------------------
-
     private String validarNombre(String nombre) {
         String clean = nombre == null ? "" : nombre.trim();
         if (clean.isEmpty()) {
