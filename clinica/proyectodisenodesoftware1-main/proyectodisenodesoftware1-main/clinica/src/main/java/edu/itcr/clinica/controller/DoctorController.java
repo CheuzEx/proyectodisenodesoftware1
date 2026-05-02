@@ -9,11 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * API REST para la entidad Doctor.
- * Base path: /api/doctores
- *
- */
+//API REST para la entidad Doctor.
+//Base path: /api/doctores
 @RestController
 @RequestMapping("/api/doctores")
 @CrossOrigin
@@ -25,49 +22,53 @@ public class DoctorController {
         this.doctorService = doctorService;
     }
 
-    /** GET /api/doctores — Lista todos los doctores. */
+    // GET /api/doctores  
+    //Lista todos los doctores.
     @GetMapping
     public List<Doctor> listar() {
         return doctorService.listar();
     }
 
-    /** GET /api/doctores/{id} — Obtiene un doctor por ID. */
+    // GET /api/doctores/{id}  
+    // Obtiene un doctor por ID. 
     @GetMapping("/{id}")
     public Doctor obtener(@PathVariable Long id) {
         return doctorService.buscarPorId(id);
     }
 
-    /** POST /api/doctores — Crea un nuevo doctor. */
+    //POST /api/doctores 
+    //Crea un nuevo doctor.
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Doctor crear(@Valid @RequestBody Doctor doctor) {
         return doctorService.crear(doctor);
     }
 
-    /** PUT /api/doctores/{id} — Actualiza los datos de un doctor existente. */
+    // PUT /api/doctores/{id} 
+    // Actualiza los datos de un doctor existente. 
     @PutMapping("/{id}")
     public Doctor actualizar(@PathVariable Long id, @Valid @RequestBody Doctor cambios) {
         return doctorService.actualizar(id, cambios);
     }
 
-    /** DELETE /api/doctores/{id} — Elimina un doctor por ID. */
+    // DELETE /api/doctores/{id} 
+    // Elimina un doctor por ID. 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminar(@PathVariable Long id) {
         doctorService.eliminar(id);
     }
 
-    /** GET /api/doctores/{id}/especialidades — Devuelve las especialidades de un doctor. */
+    // GET /api/doctores/{id}/especialidades 
+    // Devuelve las especialidades de un doctor. 
     @GetMapping("/{id}/especialidades")
     public List<Especialidad> obtenerEspecialidades(@PathVariable Long id) {
         return doctorService.especialidadesPorDoctor(id);
     }
 
-    /**
-     * PUT /api/doctores/{id}/especialidades
-     * Reemplaza el conjunto completo de especialidades del doctor.
-     * Body: [1, 3, 5]  (lista de IDs de especialidad)
-     */
+
+    // PUT /api/doctores/{id}/especialidades
+    // Reemplaza el conjunto completo de especialidades del doctor.
     @PutMapping("/{id}/especialidades")
     public Doctor actualizarEspecialidades(@PathVariable Long id,
                                            @RequestBody List<Long> especialidadIds) {
