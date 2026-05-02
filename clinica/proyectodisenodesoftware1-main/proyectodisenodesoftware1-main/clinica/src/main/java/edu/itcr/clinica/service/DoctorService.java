@@ -25,13 +25,13 @@ public class DoctorService {
         this.especialidadRepo = especialidadRepo;
     }
 
-    /** Devuelve todos los doctores registrados. */
+    // Devuelve todos los doctores registrados. 
     @Transactional(readOnly = true)
     public List<Doctor> listar() {
         return doctorRepo.findAll();
     }
 
-    /** Busca un doctor por su ID, lanzando 404 si no existe. */
+    // Busca un doctor por su ID, lanzando 404 si no existe. 
     @Transactional(readOnly = true)
     public Doctor buscarPorId(Long id) {
         return doctorRepo.findByIdDoctor(id)
@@ -39,19 +39,19 @@ public class DoctorService {
                         "Doctor no encontrado: " + id));
     }
 
-    /** Persiste un nuevo doctor. */
+    // Persiste un nuevo doctor. 
     @Transactional
     public Doctor crear(Doctor doctor) {
         return doctorRepo.save(doctor);
     }
 
-    /** Elimina un doctor por ID. */
+    // Elimina un doctor por ID. 
     @Transactional
     public void eliminar(Long id) {
         doctorRepo.deleteById(id);
     }
 
-    /** Actualiza los datos personales de un doctor existente. */
+    // Actualiza los datos personales de un doctor existente. 
     @Transactional
     public Doctor actualizar(Long id, Doctor cambios) {
         Doctor doctor = buscarPorId(id);
@@ -62,10 +62,8 @@ public class DoctorService {
         return doctorRepo.save(doctor);
     }
 
-    /**
-     * Reemplaza el conjunto de especialidades de un doctor.
-     * Si la lista de IDs es nula o vacía, se eliminan todas las especialidades.
-     */
+    // Reemplaza el conjunto de especialidades de un doctor.
+    // Si la lista de IDs es nula o vacía, se eliminan todas las especialidades.
     @Transactional
     public Doctor actualizarEspecialidades(Long doctorId, List<Long> especialidadIds) {
         Doctor doctor = buscarPorId(doctorId);
@@ -77,10 +75,8 @@ public class DoctorService {
         return doctorRepo.save(doctor);
     }
 
-    /**
-     * Crea una especialidad nueva si no existe ya (por nombre, ignorando mayúsculas).
-     * Devuelve la especialidad existente o la recién creada.
-     */
+    // Crea una especialidad nueva si no existe ya (por nombre, ignorando mayúsculas).
+    // Devuelve la especialidad existente o la recién creada.
     @Transactional
     public Especialidad crearEspecialidadSiNoExiste(String nombre) {
         String clean = nombre == null ? "" : nombre.trim();
@@ -93,13 +89,13 @@ public class DoctorService {
                 .orElseGet(() -> especialidadRepo.save(new Especialidad(clean)));
     }
 
-    /** Devuelve las especialidades de un doctor ordenadas alfabéticamente. */
+    // Devuelve las especialidades de un doctor ordenadas alfabéticamente. 
     @Transactional(readOnly = true)
     public List<Especialidad> especialidadesPorDoctor(Long doctorId) {
         return especialidadRepo.findByDoctores_IdDoctor(doctorId);
     }
 
-    /** Devuelve todas las especialidades registradas en el sistema. */
+    // Devuelve todas las especialidades registradas en el sistema. 
     @Transactional(readOnly = true)
     public List<Especialidad> listarEspecialidades() {
         return especialidadRepo.findAll();
