@@ -37,7 +37,7 @@ public class CitaService {
         this.doctorRepo = doctorRepo;
     }
 
-    /** Devuelve todas las citas de un doctor en un día específico. */
+    // Devuelve todas las citas de un doctor en un día específico. 
     @Transactional(readOnly = true)
     public List<Cita> listarPorDia(Long doctorId, LocalDate fecha) {
         LocalDateTime start = fecha.atStartOfDay();
@@ -45,11 +45,9 @@ public class CitaService {
         return citaRepo.findByDoctor_IdDoctorAndFechaHoraBetweenOrderByFechaHoraAsc(doctorId, start, end);
     }
 
-    /**
-     * Crea una nueva cita aplicando las reglas de negocio:
-     * - El horario no puede estar ya ocupado por una cita ATENDIDA o PROGRAMADA.
-     * - Paciente y Especialidad deben existir.
-     */
+    // Crea una nueva cita aplicando las reglas de negocio:
+    // El horario no puede estar ya ocupado por una cita ATENDIDA o PROGRAMADA.
+    // Paciente y Especialidad deben existir.
     @Transactional
     public Cita crear(Long doctorId, Long pacienteId, Long especialidadId,
                       String fecha, String hora, String motivo) {
@@ -97,7 +95,7 @@ public class CitaService {
         return citaRepo.save(cita);
     }
 
-    /** Cambia el estado de una cita a CANCELADA. */
+    // Cambia el estado de una cita a CANCELADA. 
     @Transactional
     public Cita cancelar(Long id) {
         Cita cita = buscarPorId(id);
@@ -105,7 +103,7 @@ public class CitaService {
         return citaRepo.save(cita);
     }
 
-    /** Cambia el estado de una cita a ATENDIDA. */
+    // Cambia el estado de una cita a ATENDIDA. 
     @Transactional
     public Cita atender(Long id) {
         Cita cita = buscarPorId(id);
@@ -113,10 +111,8 @@ public class CitaService {
         return citaRepo.save(cita);
     }
 
-    /**
-     * Consulta si un horario está disponible para un doctor.
-     * Un horario se considera libre cuando solo hay citas CANCELADAS (o ninguna).
-     */
+    // Consulta si un horario está disponible para un doctor.
+    // Un horario se considera libre cuando solo hay citas CANCELADAS (o ninguna).
     @Transactional(readOnly = true)
     public Map<String, Object> verificarDisponibilidad(Long doctorId, String fecha, String hora) {
         LocalDateTime fechaHora = LocalDateTime.of(
@@ -135,10 +131,7 @@ public class CitaService {
         );
     }
 
-    // ------------------------------------------------------------------
     // Helpers internos
-    // ------------------------------------------------------------------
-
     private Cita buscarPorId(Long id) {
         return citaRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
