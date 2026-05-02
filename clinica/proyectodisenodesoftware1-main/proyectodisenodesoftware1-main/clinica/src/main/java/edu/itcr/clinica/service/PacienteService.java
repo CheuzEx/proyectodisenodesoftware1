@@ -23,23 +23,21 @@ public class PacienteService {
         this.historialRepo = historialRepo;
     }
 
-    /** Devuelve todos los pacientes ordenados por apellido y nombre. */
+    // Devuelve todos los pacientes ordenados por apellido y nombre. 
     @Transactional(readOnly = true)
     public List<Paciente> listar() {
         return pacienteRepo.findAllByOrderByApellidoAscNombreAsc();
     }
 
-    /**
-     * Busca pacientes cuyo nombre o apellido contenga la cadena indicada.
-     * Si la cadena está vacía devuelve el listado completo.
-     */
+    // Busca pacientes cuyo nombre o apellido contenga la cadena indicada.
+    // Si la cadena está vacía devuelve el listado completo.
     @Transactional(readOnly = true)
     public List<Paciente> buscar(String q) {
         if (q == null || q.isBlank()) return listar();
         return pacienteRepo.searchByNombreOrApellido(q.trim());
     }
 
-    /** Busca un paciente por ID, lanzando 404 si no existe. */
+    // Busca un paciente por ID, lanzando 404 si no existe. 
     @Transactional(readOnly = true)
     public Paciente buscarPorId(Long id) {
         return pacienteRepo.findById(id)
@@ -47,21 +45,20 @@ public class PacienteService {
                         "Paciente no encontrado: " + id));
     }
 
-    /** Persiste un nuevo paciente sin historial. */
+    // Persiste un nuevo paciente sin historial. 
     @Transactional
     public Paciente crear(Paciente paciente) {
         return pacienteRepo.save(paciente);
     }
 
-    /**
-     * Persiste un nuevo paciente y crea automáticamente su historial médico inicial vacío.
-     * Este es el método que deben usar los endpoints REST (CU-01).
-     */
+    // Persiste un nuevo paciente y crea automáticamente su historial médico inicial vacío.
+    // Este es el método que deben usar los endpoints REST (CU-01).
     @Transactional
     public Paciente crearConHistorial(Paciente paciente) {
         Paciente guardado = pacienteRepo.save(paciente);
 
-        // Historial inicial vacío — cita, diagnostico y tratamiento son null hasta la primera atención
+        // Historial inicial vacío 
+        // cita, diagnostico y tratamiento son null hasta la primera atención
         HistorialMedico historialInicial = new HistorialMedico();
         historialInicial.setPaciente(guardado);
         historialRepo.save(historialInicial);
@@ -69,7 +66,7 @@ public class PacienteService {
         return guardado;
     }
 
-    /** Actualiza los datos permitidos de un paciente existente. */
+    // Actualiza los datos permitidos de un paciente existente. 
     @Transactional
     public Paciente actualizar(Long id, Paciente cambios) {
         Paciente paciente = buscarPorId(id);
@@ -83,7 +80,7 @@ public class PacienteService {
         return pacienteRepo.save(paciente);
     }
 
-    /** Elimina un paciente por ID. */
+    // Elimina un paciente por ID. 
     @Transactional
     public void eliminar(Long id) {
         pacienteRepo.deleteById(id);
