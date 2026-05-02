@@ -43,19 +43,19 @@ public class HistorialMedicoService {
         public Integer duracion;
     }
 
-    /** Devuelve todos los historiales médicos del sistema. */
+    // Devuelve todos los historiales médicos del sistema. 
     @Transactional(readOnly = true)
     public List<HistorialMedico> listar() {
         return historialRepo.findAll();
     }
 
-    /** Devuelve los historiales de un paciente, del más reciente al más antiguo. */
+    // Devuelve los historiales de un paciente, del más reciente al más antiguo. 
     @Transactional(readOnly = true)
     public List<HistorialMedico> listarPorPaciente(Long idPaciente) {
         return historialRepo.findHistorialesRealesPorPaciente(idPaciente);
     }
 
-    /** Busca el historial asociado a una cita específica. */
+    // Busca el historial asociado a una cita específica. 
     @Transactional(readOnly = true)
     public HistorialMedico buscarPorCita(Long idCita) {
         return historialRepo.findByCita_IdCita(idCita)
@@ -63,7 +63,7 @@ public class HistorialMedicoService {
                         "Historial no encontrado para la cita: " + idCita));
     }
 
-    /** Devuelve un paciente por ID, lanzando 404 si no existe. */
+    // Devuelve un paciente por ID, lanzando 404 si no existe. 
     @Transactional(readOnly = true)
     public Paciente buscarPaciente(Long idPaciente) {
         return pacienteRepo.findById(idPaciente)
@@ -71,12 +71,12 @@ public class HistorialMedicoService {
                         "Paciente no encontrado: " + idPaciente));
     }
 
-    /**
-     * Registra la atención de una cita:
-     * 1. Valida que la cita exista y esté en estado PROGRAMADA.
-     * 2. Valida que aún no tenga historial asociado.
-     * 3. Crea el historial con diagnóstico, tratamiento y recetas.
-     * 4. Marca la cita como ATENDIDA.
+    /*
+      Registra la atención de una cita:
+      1. Valida que la cita exista y esté en estado PROGRAMADA.
+      2. Valida que aún no tenga historial asociado.
+      3. Crea el historial con diagnóstico, tratamiento y recetas.
+      4. Marca la cita como ATENDIDA.
      */
     @Transactional
     public HistorialMedico registrarAtencion(Long citaId,
@@ -136,10 +136,7 @@ public class HistorialMedicoService {
         return historial;
     }
 
-    // ------------------------------------------------------------------
     // Helpers internos
-    // ------------------------------------------------------------------
-
     private boolean esVacio(String s) {
         return s == null || s.trim().isEmpty();
     }
