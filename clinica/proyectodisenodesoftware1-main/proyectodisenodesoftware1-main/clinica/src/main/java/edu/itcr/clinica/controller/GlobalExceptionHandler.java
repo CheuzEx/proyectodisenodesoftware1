@@ -11,17 +11,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Manejo global de excepciones para todos los controladores REST.
- * Garantiza respuestas de error consistentes en formato JSON.
- */
+// Manejo global de excepciones para todos los controladores REST.
+// Garantiza respuestas de error consistentes en formato JSON.
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Captura errores de validación (@Valid) y devuelve la lista de campos inválidos.
-     * HTTP 400 Bad Request.
-     */
+    //Captura errores de validación (@Valid) y devuelve la lista de campos inválidos.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(
             MethodArgumentNotValidException ex) {
@@ -37,10 +32,8 @@ public class GlobalExceptionHandler {
                 .body(errorBody(HttpStatus.BAD_REQUEST, "Error de validación", errores));
     }
 
-    /**
-     * Captura ResponseStatusException lanzadas desde services y controllers.
-     * Devuelve el código HTTP y mensaje definidos en la excepción.
-     */
+    // Captura ResponseStatusException lanzadas desde services y controllers.
+    // Devuelve el código HTTP y mensaje definidos en la excepción.
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleResponseStatus(
             ResponseStatusException ex) {
@@ -51,10 +44,8 @@ public class GlobalExceptionHandler {
                 .body(errorBody(status, ex.getReason(), null));
     }
 
-    /**
-     * Captura cualquier excepción no controlada.
-     * HTTP 500 Internal Server Error.
-     */
+    // Captura cualquier excepción no controlada.
+    // HTTP 500 Internal Server Error.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
         return ResponseEntity
@@ -63,10 +54,7 @@ public class GlobalExceptionHandler {
                         "Error interno del servidor", null));
     }
 
-    // -----------------------------------------------------------------------
     // Helper
-    // -----------------------------------------------------------------------
-
     private Map<String, Object> errorBody(HttpStatus status, String mensaje, List<String> detalles) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("status",  status.value());
