@@ -8,12 +8,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * API REST para la entidad Paciente.
- * Base path: /pacientes
- *
- * Las vistas Thymeleaf asociadas se encuentran en VistaController.
- */
+// API REST para la entidad Paciente.
+// Base path: /pacientes
 @RestController
 @RequestMapping("/api/pacientes")
 @CrossOrigin
@@ -25,32 +21,37 @@ public class PacienteController {
         this.pacienteService = pacienteService;
     }
 
-    /** GET /pacientes — Lista todos los pacientes ordenados por apellido. */
+    // GET /pacientes 
+    // Lista todos los pacientes ordenados por apellido. 
     @GetMapping
     public List<Paciente> listar() {
         return pacienteService.listar();
     }
 
-    /** GET /pacientes/{id} — Obtiene un paciente por ID. */
+    // GET /pacientes/{id} 
+    // Obtiene un paciente por ID. 
     @GetMapping("/{id}")
     public Paciente obtener(@PathVariable Long id) {
         return pacienteService.buscarPorId(id);
     }
 
-    /** POST /pacientes — Crea un nuevo paciente (y su historial inicial). */
+    // POST /pacientes 
+    // Crea un nuevo paciente (y su historial inicial). 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Paciente crear(@Valid @RequestBody Paciente paciente) {
         return pacienteService.crearConHistorial(paciente);
     }
 
-    /** PUT /pacientes/{id} — Actualiza los datos de un paciente existente. */
+    // PUT /pacientes/{id} 
+    // Actualiza los datos de un paciente existente. 
     @PutMapping("/{id}")
     public Paciente actualizar(@PathVariable Long id, @Valid @RequestBody Paciente cambios) {
         return pacienteService.actualizar(id, cambios);
     }
 
-    /** DELETE /pacientes/{id} — Elimina un paciente por ID. */
+    // DELETE /pacientes/{id} 
+    // Elimina un paciente por ID. 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminar(@PathVariable Long id) {
