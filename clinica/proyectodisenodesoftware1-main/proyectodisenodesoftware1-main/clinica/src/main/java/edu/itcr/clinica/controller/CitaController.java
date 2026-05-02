@@ -22,7 +22,7 @@ public class CitaController {
         this.citaService = citaService;
     }
 
-    /** DTO mínimo para crear una cita. */
+    // DTO mínimo para crear una cita. 
     public static class CrearCitaRequest {
         public String fecha;
         public String hora;
@@ -32,7 +32,7 @@ public class CitaController {
         public Long   especialidadId;
     }
 
-    /** Devuelve las citas de un doctor en un día específico. */
+    // Devuelve las citas de un doctor en un día específico.
     @GetMapping("/dia")
     public List<Cita> listarPorDia(
             @RequestParam Long doctorId,
@@ -41,7 +41,7 @@ public class CitaController {
         return citaService.listarPorDia(doctorId, fecha);
     }
 
-    /** Crea una nueva cita, validando disponibilidad de horario. */
+    // Crea una nueva cita, validando disponibilidad de horario. 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Cita crear(@RequestBody CrearCitaRequest req) {
@@ -55,19 +55,19 @@ public class CitaController {
                 req.fecha, req.hora, req.motivo);
     }
 
-    /** Cancela una cita existente. */
+    // Cancela una cita existente. 
     @PatchMapping("/{id}/cancelar")
     public Cita cancelar(@PathVariable Long id) {
         return citaService.cancelar(id);
     }
 
-    /** Marca una cita como atendida. */
+    // Marca una cita como atendida. 
     @PatchMapping("/{id}/atender")
     public Cita atender(@PathVariable Long id) {
         return citaService.atender(id);
     }
 
-    /** Verifica si un horario está disponible para un doctor. */
+    // Verifica si un horario está disponible para un doctor. 
     @GetMapping("/disponible")
     public Map<String, Object> verificarDisponibilidad(
             @RequestParam Long   doctorId,
