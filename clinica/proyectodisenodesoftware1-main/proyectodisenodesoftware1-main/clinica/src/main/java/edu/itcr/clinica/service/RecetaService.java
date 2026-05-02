@@ -16,13 +16,13 @@ public class RecetaService {
         this.recetaRepo = recetaRepo;
     }
 
-    /** Devuelve todas las recetas registradas. */
+    // Devuelve todas las recetas registradas. 
     @Transactional(readOnly = true)
     public List<Receta> listar() {
         return recetaRepo.findAll();
     }
 
-    /** Persiste una nueva receta. */
+    // Persiste una nueva receta. 
     @Transactional
     public Receta crear(Receta receta) {
         return recetaRepo.save(receta);
