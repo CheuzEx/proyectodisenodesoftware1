@@ -9,6 +9,11 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Entidad que representa a un médico en el sistema.
+ * Mapea la tabla "doctor" del esquema "clinica".
+ * Relación muchos a muchos con Especialidad a través de la tabla intermedia "doc_especialidad".
+ */
 @Entity
 @Table(name = "doctor", schema = "clinica")
 public class Doctor {
@@ -16,23 +21,23 @@ public class Doctor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_doctor")
-    private Long idDoctor;
+    private Long idDoctor;  // Identificador único del doctor (autogenerado)
 
     @NotBlank(message = "El nombre es obligatorio")
     @Size(max = 100)
     @Column(nullable = false, length = 100)
-    private String nombre;
+    private String nombre;  // Nombre del doctor
 
     @NotBlank(message = "El apellido es obligatorio")
     @Size(max = 100)
     @Column(nullable = false, length = 100)
-    private String apellido;
+    private String apellido;  // Apellido del doctor
 
     @Column(length = 50)
-    private String telefono;
+    private String telefono;  // Número de teléfono (opcional)
 
     @Column(length = 150)
-    private String direccion;
+    private String direccion; // Dirección (opcional)
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -41,9 +46,10 @@ public class Doctor {
             joinColumns = @JoinColumn(name = "id_doctor"),
             inverseJoinColumns = @JoinColumn(name = "id_especialidad")
     )
-    @JsonIgnore
-    private Set<Especialidad> especialidades = new HashSet<>();
+    @JsonIgnore   // Evita la serialización recursiva al obtener doctores
+    private Set<Especialidad> especialidades = new HashSet<>(); // Especialidades asociadas al doctor
 
+    // Constructores
     public Doctor() {}
 
     public Doctor(String nombre, String apellido) {
@@ -51,6 +57,7 @@ public class Doctor {
         this.apellido = apellido;
     }
 
+    // Getters y Setters
     public Long getIdDoctor() {
         return idDoctor;
     }
@@ -99,18 +106,20 @@ public class Doctor {
         this.especialidades = especialidades != null ? especialidades : new HashSet<>();
     }
 
+    // Métodos de utilidad para manejar la relación bidireccional
     public void addEspecialidad(Especialidad especialidad) {
         if (especialidad == null) return;
         this.especialidades.add(especialidad);
-        especialidad.getDoctores().add(this);
+        especialidad.getDoctores().add(this);  // Sincroniza el otro lado de la relación
     }
 
     public void removeEspecialidad(Especialidad especialidad) {
         if (especialidad == null) return;
         this.especialidades.remove(especialidad);
-        especialidad.getDoctores().remove(this);
+        especialidad.getDoctores().remove(this); // Elimina la referencia bidireccional
     }
 
+    // equals y hashCode basados en el ID (para uso en colecciones)
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -125,6 +134,7 @@ public class Doctor {
         return Objects.hash(idDoctor);
     }
 
+    // Representación en texto (útil para logs)
     @Override
     public String toString() {
         return "Doctor{" +
