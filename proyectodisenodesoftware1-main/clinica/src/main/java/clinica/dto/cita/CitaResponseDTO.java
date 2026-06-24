@@ -25,7 +25,6 @@ public class CitaResponseDTO {
         dto.setFechaHora(c.getFechaHora());
         dto.setMotivo(c.getMotivo());
 
-        // CORRECCIÓN: Convertimos el Enum a String de forma segura controlando posibles nulos
         dto.setEstado(c.getEstado() != null ? c.getEstado().name() : null);
 
         dto.setPaciente(PacienteResumenDTO.fromEntity(c.getPaciente()));
