@@ -12,6 +12,23 @@ import java.util.Optional;
  */
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
-    // Busca un usuario por su nombre de usuario (username) para autenticación
+    /**
+     * Busca un usuario por su nombre de usuario (username)
+     * para autenticación y control de acceso.
+     *
+     * @param username nombre de usuario.
+     * @return usuario encontrado si existe.
+     */
     Optional<Usuario> findByUsername(String username);
+
+    /**
+     * Busca el usuario asociado a un doctor específico.
+     *
+     * Este método navega la relación Usuario -> Doctor
+     * utilizando el identificador del médico.
+     *
+     * @param idDoctor identificador único del doctor.
+     * @return usuario asociado al doctor si existe.
+     */
+    Optional<Usuario> findByDoctor_IdDoctor(Long idDoctor);
 }
