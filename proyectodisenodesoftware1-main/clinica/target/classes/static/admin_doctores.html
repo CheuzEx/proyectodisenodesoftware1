@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gestion de Doctores</title>
+    <style>
+        :root { --primary: #1a56db; --bg: #f4f6f9; --card: #ffffff; --border: #d1d5db; --text: #111827; --muted: #6b7280; --danger: #dc2626; --ok: #16a34a; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
+        header { background: var(--primary); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+        header h1 { margin: 0; font-size: 1.1rem; }
+        .btn-back { color: #fff; text-decoration: none; font-size: .9rem; border: 1px solid rgba(255,255,255,.4); padding: 6px 12px; border-radius: 8px; }
+        main { max-width: 1100px; margin: 28px auto; padding: 0 24px; display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        @media(max-width:800px){ main { grid-template-columns: 1fr; } }
+
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+        .card-title { font-size: 1rem; font-weight: bold; margin: 0 0 16px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: .9rem; }
+        th { background: #f0f4ff; font-weight: bold; }
+        tr:hover td { background: #f8f9ff; }
+
+        .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+        input[type="text"], input[type="tel"], input[type="password"] { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: .9rem; }
+        input[type="text"]#searchInput { flex: 1; min-width: 180px; }
+        .btn { padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: .9rem; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-danger  { background: var(--danger);  color: #fff; }
+        .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text); }
+        .btn-sm { padding: 5px 10px; font-size: .8rem; }
+
+        label { display: block; font-size: .85rem; font-weight: bold; margin: 10px 0 3px; }
+        input.field { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: .9rem; margin-bottom: 2px; }
+        input:focus { outline: none; border-color: var(--primary); }
+
+        .alert { padding: 10px 12px; border-radius: 8px; font-size: .88rem; margin-bottom: 12px; display: none; }
+        .alert.ok  { background: #dcfce7; color: #166534; }
+        .alert.err { background: #fee2e2; color: var(--danger); }
+
+        .muted { color: var(--muted); font-size: .88rem; }
+
+        .section-divider { border: none; border-top: 1px dashed var(--border); margin: 14px 0 4px; }
+        .section-label { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 0 0 6px; }
+
+        /* Modal */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .overlay.open { display: flex; }
+        .modal { background: #fff; border-radius: 10px; padding: 24px; max-width: 420px; width: 92%; }
+        .modal h3 { margin: 0 0 12px; font-size: 1rem; }
+        .modal p  { margin: 0 0 16px; font-size: .9rem; color: var(--muted); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Gestion de Doctores</h1>
+    <a class="btn-back" href="/">Volver al menu</a>
+</header>
+
+<main>
+    <!-- Lista -->
+    <div class="card">
+        <p class="card-title">Doctores registrados</p>
+        <div class="toolbar">
+            <input type="text" id="searchInput" placeholder="Buscar por nombre o apellido..." />
+            <button class="btn btn-outline" onclick="limpiar()">Limpiar</button>
+            <button class="btn btn-primary" onclick="abrirCrear()">+ Nuevo doctor</button>
+        </div>
+        <div id="alertGlobal" class="alert"></div>
+        <table>
+            <thead><tr><th>ID</th><th>Nombre</th><th>Telefono</th><th>Acciones</th></tr></thead>
+            <tbody id="tbody"><tr><td colspan="4" class="muted">Cargando...</td></tr></tbody>
+        </table>
+    </div>
+
+    <!-- Panel lateral -->
+    <div class="card" id="panelLateral">
+        <p class="card-title" id="panelTitulo">Selecciona una accion</p>
+        <p class="muted" id="panelDefault">Haz clic en "Nuevo doctor" o en "Editar" para comenzar.</p>
+
+        <div id="panelForm" style="display:none">
+            <div id="alertForm" class="alert"></div>
+
+            <!-- Datos del doctor (siempre visibles) -->
+            <label>Nombre</label>
+            <input type="text" class="field" id="f_nombre" placeholder="Nombre" />
+            <label>Apellido</label>
+            <input type="text" class="field" id="f_apellido" placeholder="Apellido" />
+            <label>Telefono</label>
+            <input type="tel" class="field" id="f_telefono" placeholder="+506 8888-8888" />
+            <label>Direccion</label>
+            <input type="text" class="field" id="f_direccion" placeholder="Provincia, canton..." />
+
+            <!-- Credenciales de acceso: solo visibles al CREAR -->
+            <div id="seccionCredenciales">
+                <hr class="section-divider" />
+                <p class="section-label">Credenciales de acceso</p>
+                <label>Usuario (username)</label>
+                <input type="text" class="field" id="f_username" placeholder="ej: doctor.gomez" autocomplete="off" />
+                <label>Contraseña</label>
+                <input type="password" class="field" id="f_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:16px;">
+                <button class="btn btn-primary" onclick="guardar()">Guardar</button>
+                <button class="btn btn-outline" onclick="cerrarPanel()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Modal eliminar -->
+<div class="overlay" id="modalEliminar">
+    <div class="modal">
+        <h3>Confirmar eliminacion</h3>
+        <p id="modalTexto">¿Seguro que deseas eliminar este doctor?</p>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── Auth ────────────────────────────────────────────────────────
+    function getToken(){ return localStorage.getItem('jwt_token'); }
+    function authHeaders(){
+      const t = getToken();
+      if(!t){ location.href='/login.html'; return null; }
+      return { 'Content-Type':'application/json', 'Authorization':`Bearer ${t}` };
+    }
+    function checkAuth(res){ if(res.status===401||res.status===403){ location.href='/login.html'; return false; } return true; }
+
+    // ── Estado ──────────────────────────────────────────────────────
+    let todos = [];
+    let modoEditar = false;
+    let editId = null;
+    let pendingDeleteId = null;
+
+    // ── Carga ───────────────────────────────────────────────────────
+    async function cargar(){
+      const h = authHeaders(); if(!h) return;
+      try{
+        const res = await fetch('/api/doctores', {headers:h});
+        if(!checkAuth(res)) return;
+        if(!res.ok) throw new Error();
+        todos = await res.json();
+        renderTabla(todos);
+      } catch {
+        mostrarAlertaGlobal('err', 'No se pudieron cargar los doctores.');
+      }
+    }
+
+    function renderTabla(lista){
+      const tbody = document.getElementById('tbody');
+      if(!lista.length){
+        tbody.innerHTML = '<tr><td colspan="4" class="muted">No hay doctores registrados.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = lista.map(d => `
+        <tr>
+          <td>${d.idDoctor ?? d.id}</td>
+          <td>${d.nombre ?? ''} ${d.apellido ?? ''}</td>
+          <td>${d.telefono ?? '—'}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="abrirEditar(${d.idDoctor ?? d.id})">Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="abrirModalEliminar(${d.idDoctor ?? d.id}, '${(d.nombre??'')} ${(d.apellido??'')}')">Eliminar</button>
+            <button class="btn btn-outline btn-sm"
+              onclick="location.href='/doctor_especialidades_form.html?doctorId=${d.idDoctor ?? d.id}'">
+              Especialidades
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // ── Busqueda ────────────────────────────────────────────────────
+    document.getElementById('searchInput').addEventListener('input', function(){
+      const q = this.value.trim().toLowerCase();
+      if(!q){ renderTabla(todos); return; }
+      renderTabla(todos.filter(d =>
+        (d.nombre||'').toLowerCase().includes(q) ||
+        (d.apellido||'').toLowerCase().includes(q)
+      ));
+    });
+
+    function limpiar(){ document.getElementById('searchInput').value=''; renderTabla(todos); }
+
+    // ── Panel Crear ─────────────────────────────────────────────────
+    function abrirCrear(){
+      modoEditar = false; editId = null;
+      document.getElementById('panelTitulo').textContent = 'Nuevo doctor';
+      document.getElementById('panelDefault').style.display = 'none';
+      document.getElementById('panelForm').style.display = 'block';
+      // Mostrar sección de credenciales solo al crear
+      document.getElementById('seccionCredenciales').style.display = 'block';
+      document.getElementById('f_nombre').value    = '';
+      document.getElementById('f_apellido').value  = '';
+      document.getElementById('f_telefono').value  = '';
+      document.getElementById('f_direccion').value = '';
+      document.getElementById('f_username').value  = '';
+      document.getElementById('f_password').value  = '';
+      ocultarAlertaForm();
+    }
+
+    // ── Panel Editar ────────────────────────────────────────────────
+    async function abrirEditar(id){
+      const h = authHeaders(); if(!h) return;
+      try{
+        const res = await fetch(`/api/doctores/${id}`, {headers:h});
+        if(!checkAuth(res)) return;
+        const d = await res.json();
+        modoEditar = true; editId = id;
+        document.getElementById('panelTitulo').textContent = `Editar: ${d.nombre} ${d.apellido}`;
+        document.getElementById('panelDefault').style.display = 'none';
+        document.getElementById('panelForm').style.display = 'block';
+        // Ocultar credenciales al editar (no se cambian desde aquí)
+        document.getElementById('seccionCredenciales').style.display = 'none';
+        document.getElementById('f_nombre').value    = d.nombre    || '';
+        document.getElementById('f_apellido').value  = d.apellido  || '';
+        document.getElementById('f_telefono').value  = d.telefono  || '';
+        document.getElementById('f_direccion').value = d.direccion || '';
+        ocultarAlertaForm();
+      } catch {
+        mostrarAlertaGlobal('err', 'No se pudo cargar el doctor.');
+      }
+    }
+
+    function cerrarPanel(){
+      document.getElementById('panelTitulo').textContent = 'Selecciona una accion';
+      document.getElementById('panelDefault').style.display = 'block';
+      document.getElementById('panelForm').style.display = 'none';
+      modoEditar = false; editId = null;
+    }
+
+    // ── Guardar ─────────────────────────────────────────────────────
+    async function guardar(){
+      const h = authHeaders(); if(!h) return;
+
+      const payload = {
+        nombre:    document.getElementById('f_nombre').value.trim(),
+        apellido:  document.getElementById('f_apellido').value.trim(),
+        telefono:  document.getElementById('f_telefono').value.trim() || null,
+        direccion: document.getElementById('f_direccion').value.trim() || null,
+      };
+
+      if(!payload.nombre || !payload.apellido){
+        mostrarAlertaForm('err', 'Nombre y apellido son obligatorios.');
+        return;
+      }
+
+      // Al crear, incluir y validar credenciales
+      if(!modoEditar){
+        const username = document.getElementById('f_username').value.trim();
+        const password = document.getElementById('f_password').value;
+        if(!username){
+          mostrarAlertaForm('err', 'El username es obligatorio.');
+          return;
+        }
+        if(!password || password.length < 6){
+          mostrarAlertaForm('err', 'La contraseña debe tener al menos 6 caracteres.');
+          return;
+        }
+        payload.username = username;
+        payload.password = password;
+      }
+
+      try{
+        const url    = modoEditar ? `/api/doctores/${editId}` : '/api/doctores';
+        const method = modoEditar ? 'PUT' : 'POST';
+        const res = await fetch(url, {method, headers:h, body:JSON.stringify(payload)});
+        if(!checkAuth(res)) return;
+        if(!res.ok){
+          let msg = 'No se pudo guardar.';
+          try { const b = await res.json(); msg = b.message ?? b.error ?? msg; }
+          catch { msg = await res.text().catch(()=>msg); }
+          throw new Error(msg);
+        }
+        mostrarAlertaGlobal('ok', modoEditar ? 'Doctor actualizado.' : 'Doctor creado correctamente.');
+        cerrarPanel();
+        await cargar();
+      } catch(err) {
+        mostrarAlertaForm('err', err.message || 'No se pudo guardar.');
+      }
+    }
+
+    // ── Eliminar ────────────────────────────────────────────────────
+    function abrirModalEliminar(id, nombre){
+      pendingDeleteId = id;
+      document.getElementById('modalTexto').textContent =
+        `¿Seguro que deseas eliminar al Dr. ${nombre.trim()}? Esta accion no se puede deshacer.`;
+      document.getElementById('modalEliminar').classList.add('open');
+    }
+
+    function cerrarModal(){
+      document.getElementById('modalEliminar').classList.remove('open');
+      pendingDeleteId = null;
+    }
+
+    async function confirmarEliminar(){
+      if(!pendingDeleteId) return;
+      const h = authHeaders(); if(!h) return;
+      try{
+        const res = await fetch(`/api/doctores/${pendingDeleteId}`, {method:'DELETE', headers:h});
+        if(!checkAuth(res)) return;
+        if(!res.ok) throw new Error();
+        cerrarModal();
+        mostrarAlertaGlobal('ok', 'Doctor eliminado.');
+        await cargar();
+      } catch {
+        cerrarModal();
+        mostrarAlertaGlobal('err', 'No se pudo eliminar el doctor.');
+      }
+    }
+
+    document.getElementById('modalEliminar').addEventListener('click', (e) => {
+      if(e.target === document.getElementById('modalEliminar')) cerrarModal();
+    });
+
+    // ── Helpers alertas ─────────────────────────────────────────────
+    function mostrarAlertaGlobal(tipo, msg){
+      const el = document.getElementById('alertGlobal');
+      el.className = `alert ${tipo}`;
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display='none', 3500);
+    }
+
+    function mostrarAlertaForm(tipo, msg){
+      const el = document.getElementById('alertForm');
+      el.className = `alert ${tipo}`;
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function ocultarAlertaForm(){
+      document.getElementById('alertForm').style.display='none';
+    }
+
+    // ── Init ────────────────────────────────────────────────────────
+    cargar();
+</script>
+</body>
+</html>

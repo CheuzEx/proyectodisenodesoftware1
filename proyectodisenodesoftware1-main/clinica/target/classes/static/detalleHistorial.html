@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial del Paciente</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; }
+        header { background: #1a56db; color: #fff; padding: 16px 24px; }
+        main { padding: 24px; max-width: 1100px; margin: 0 auto; display: grid; gap: 24px; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,.06); padding: 16px 20px; }
+        .card h3 { margin: 0 0 8px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid #eef2f7; text-align: left; }
+        th { background: #e6f2fb; }
+        .back { color: #fff; text-decoration: underline; cursor: pointer; }
+        .muted { color: #64748b; }
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; background: #eef6ff; color: #1f3b73; font-size: 12px; }
+        .fab-home {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: #1a56db;
+            color: #fff;
+            border-radius: 999px;
+            padding: 12px 16px;
+            text-decoration: none;
+            box-shadow: 0 6px 16px rgba(0,0,0,.15);
+            z-index: 1000;
+        }
+
+        .recetas-table {
+            width: 100%;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h2 id="tituloPaciente">Cargando…</h2>
+        <a class="back" href="/historiales/vista">← Volver a pacientes</a>
+    </div>
+
+    <div style="margin-top:8px;">
+        <span class="pill" id="pillId"></span>
+    </div>
+</header>
+
+<main>
+
+    <div class="card" id="cardDatos">
+        <p class="muted">Cargando datos del paciente…</p>
+    </div>
+
+    <div class="card">
+        <h3>Recetas del paciente</h3>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Recetas</th>
+            </tr>
+            </thead>
+
+            <tbody id="tbodyHistorial">
+            <tr>
+                <td colspan="2" class="muted">Cargando…</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
+
+<a class="fab-home" href="/">Menú principal</a>
+
+<script>
+    function getToken() {
+        return localStorage.getItem('jwt_token');
+    }
+
+    function authHeaders() {
+        const token = getToken();
+
+        if (!token) {
+            window.location.href = '/login.html';
+            return null;
+        }
+
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+
+    const partes = location.pathname.split('/').filter(Boolean);
+    const pacienteId = partes[1];
+
+    if (!pacienteId || isNaN(pacienteId)) {
+        document.getElementById('tituloPaciente').textContent = 'ID de paciente inválido';
+    } else {
+        cargarTodo(pacienteId);
+    }
+
+    async function cargarTodo(id) {
+        await Promise.all([
+            cargarPaciente(id),
+            cargarHistorial(id)
+        ]);
+    }
+
+    async function cargarPaciente(id) {
+        const headers = authHeaders();
+        if (!headers) return;
+
+        try {
+            const res = await fetch(`/api/pacientes/${id}`, { headers });
+
+            if (res.status === 401 || res.status === 403) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            if (!res.ok) throw new Error();
+
+            const p = await res.json();
+
+            const nombre =
+                `${p.apellido || ''}, ${p.nombre || ''}`
+                    .replace(/^, |, $/, '') || 'Paciente';
+
+            document.title =
+                `Historial de ${p.nombre || ''} ${p.apellido || ''}`;
+
+            document.getElementById('tituloPaciente').textContent = nombre;
+            document.getElementById('pillId').textContent =
+                `ID: ${p.idPaciente}`;
+
+            const fmtFecha = (f) =>
+                f ? new Date(f).toLocaleDateString('es-CR') : '—';
+
+            document.getElementById('cardDatos').innerHTML = `
+                <h3>Datos del paciente</h3>
+
+                <p><b>Correo:</b> ${p.correo || '—'}</p>
+                <p><b>Teléfono:</b> ${p.telefono || '—'}</p>
+                <p><b>Fecha de nacimiento:</b> ${fmtFecha(p.fechaNacimiento)}</p>
+                <p><b>Dirección:</b> ${p.direccion || '—'}</p>
+                <p><b>Sexo:</b> ${p.sexo || '—'}</p>
+            `;
+        } catch {
+            document.getElementById('cardDatos').innerHTML =
+                '<p class="muted">No se pudo cargar el paciente.</p>';
+        }
+    }
+
+    async function cargarHistorial(id) {
+        const headers = authHeaders();
+        if (!headers) return;
+
+        const tbody = document.getElementById('tbodyHistorial');
+
+        try {
+            const res = await fetch(`/api/historiales/paciente/${id}/citas-recetas`, {
+                headers
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            if (!res.ok) throw new Error();
+
+            const citas = await res.json();
+
+            if (!citas.length) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="2" class="muted">
+                            Sin recetas registradas para este paciente.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const fmtFecha = (f) =>
+                f ? new Date(f).toLocaleDateString('es-CR') : '—';
+
+            tbody.innerHTML = citas.map(h => {
+
+                const recetas = (h.recetas && h.recetas.length)
+                    ? `
+                        <table class="recetas-table">
+                            <thead>
+                                <tr>
+                                    <th>Medicamento</th>
+                                    <th>Dosis</th>
+                                    <th>Frecuencia</th>
+                                    <th>Duración</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${h.recetas.map(r => `
+                                    <tr>
+                                        <td>${r.medicamento || '—'}</td>
+                                        <td>${r.dosis || '—'}</td>
+                                        <td>${r.frecuencia || '—'}</td>
+                                        <td>${r.duracion != null ? r.duracion + ' días' : '—'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `
+                    : '<span class="muted">Sin recetas</span>';
+
+                return `
+                    <tr>
+                        <td>${fmtFecha(h.fecha)} ${h.hora || ''}</td>
+                        <td>${recetas}</td>
+                    </tr>
+                `;
+            }).join('');
+
+        } catch {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="2" class="muted">
+                        No se pudo cargar el historial.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+</script>
+
+</body>
+</html>

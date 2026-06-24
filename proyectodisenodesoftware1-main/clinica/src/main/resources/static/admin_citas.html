@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Todas las Citas — Admin</title>
+  <style>
+    :root { --primary: #1a56db; --bg: #f4f6f9; --card: #ffffff; --border: #d1d5db; --text: #111827; --muted: #6b7280; --danger: #dc2626; --ok: #16a34a; --warn: #d97706; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
+    header { background: var(--primary); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { margin: 0; font-size: 1.1rem; }
+    .btn-back { color: #fff; text-decoration: none; font-size: .9rem; border: 1px solid rgba(255,255,255,.4); padding: 6px 12px; border-radius: 8px; }
+
+    main { max-width: 1100px; margin: 28px auto; padding: 0 24px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+
+    .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .toolbar label { font-size: .9rem; font-weight: bold; }
+    input[type="date"] { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: .9rem; }
+    select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: .9rem; background: #fff; }
+    .btn { padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: .9rem; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-danger  { background: var(--danger);  color: #fff; }
+    .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text); }
+    .btn-sm { padding: 5px 10px; font-size: .8rem; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: .9rem; }
+    th { background: #f0f4ff; font-weight: bold; }
+    tr:hover td { background: #f8f9ff; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: .78rem; font-weight: bold; }
+    .badge.PROGRAMADA { background: #dbeafe; color: #1e40af; }
+    .badge.ATENDIDA   { background: #dcfce7; color: #166534; }
+    .badge.CANCELADA  { background: #fee2e2; color: #991b1b; }
+
+    .alert { padding: 10px 12px; border-radius: 8px; font-size: .88rem; margin-bottom: 12px; display: none; }
+    .alert.ok  { background: #dcfce7; color: #166534; }
+    .alert.err { background: #fee2e2; color: var(--danger); }
+    .muted { color: var(--muted); font-size: .88rem; }
+
+    .summary { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 20px; text-align: center; }
+    .stat span { display: block; font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+    .stat p { margin: 4px 0 0; font-size: .8rem; color: var(--muted); }
+
+    /* Modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 10px; padding: 24px; max-width: 420px; width: 92%; }
+    .modal h3 { margin: 0 0 12px; font-size: 1rem; }
+    .modal p  { margin: 0 0 16px; font-size: .9rem; color: var(--muted); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Todas las Citas</h1>
+  <a class="btn-back" href="/">Volver al menu</a>
+</header>
+
+<main>
+  <!-- Toolbar -->
+  <div class="card">
+    <div class="toolbar">
+      <label for="fechaInput">Fecha:</label>
+      <input type="date" id="fechaInput" />
+      <select id="filtroDoctor">
+        <option value="">Todos los doctores</option>
+      </select>
+      <select id="filtroEstado">
+        <option value="">Todos los estados</option>
+        <option value="PROGRAMADA">Programada</option>
+        <option value="ATENDIDA">Atendida</option>
+        <option value="CANCELADA">Cancelada</option>
+      </select>
+      <button class="btn btn-primary" onclick="cargar()">Buscar</button>
+    </div>
+    <div id="alertGlobal" class="alert"></div>
+  </div>
+
+  <!-- Resumen -->
+  <div class="summary" id="summary" style="display:none">
+    <div class="stat"><span id="totalCitas">0</span><p>Total</p></div>
+    <div class="stat"><span id="totalProgramadas">0</span><p>Programadas</p></div>
+    <div class="stat"><span id="totalAtendidas">0</span><p>Atendidas</p></div>
+    <div class="stat"><span id="totalCanceladas">0</span><p>Canceladas</p></div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Hora</th>
+          <th>Paciente</th>
+          <th>Doctor</th>
+          <th>Especialidad</th>
+          <th>Motivo</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="7" class="muted">Selecciona una fecha y haz clic en Buscar.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal cancelar -->
+<div class="overlay" id="modalCancelar">
+  <div class="modal">
+    <h3>Cancelar cita</h3>
+    <p id="modalTexto">¿Seguro que deseas cancelar esta cita?</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="cerrarModal()">No</button>
+      <button class="btn btn-danger" onclick="confirmarCancelar()">Si, cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Auth ────────────────────────────────────────────────────────
+function getToken(){ return localStorage.getItem('jwt_token'); }
+function authHeaders(){
+  const t = getToken();
+  if(!t){ location.href='/login.html'; return null; }
+  return { 'Content-Type':'application/json', 'Authorization':`Bearer ${t}` };
+}
+function checkAuth(res){ if(res.status===401||res.status===403){ location.href='/login.html'; return false; } return true; }
+
+// ── Estado ──────────────────────────────────────────────────────
+let todasCitas = [];
+let pendingCancelId = null;
+
+// ── Fecha por defecto: hoy ───────────────────────────────────────
+document.getElementById('fechaInput').value = new Date().toISOString().slice(0,10);
+
+// ── Cargar doctores para el filtro ───────────────────────────────
+async function cargarDoctores(){
+  const h = authHeaders(); if(!h) return;
+  try{
+    const res = await fetch('/api/doctores', {headers:h});
+    if(!checkAuth(res)) return;
+    const doctores = await res.json();
+    const sel = document.getElementById('filtroDoctor');
+    doctores.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.idDoctor ?? d.id;
+      opt.textContent = `Dr. ${d.nombre} ${d.apellido}`;
+      sel.appendChild(opt);
+    });
+  } catch{}
+}
+
+// ── Cargar citas ─────────────────────────────────────────────────
+async function cargar(){
+  const h = authHeaders(); if(!h) return;
+  const fecha = document.getElementById('fechaInput').value;
+  if(!fecha){ mostrarAlerta('err', 'Selecciona una fecha.'); return; }
+
+  try{
+    const res = await fetch(`/api/citas/todas?fecha=${fecha}`, {headers:h});
+    if(!checkAuth(res)) return;
+    if(!res.ok) throw new Error();
+    todasCitas = await res.json();
+    aplicarFiltros();
+    document.getElementById('summary').style.display = 'flex';
+  } catch {
+    mostrarAlerta('err', 'No se pudieron cargar las citas.');
+  }
+}
+
+// ── Filtros ──────────────────────────────────────────────────────
+document.getElementById('filtroDoctor').addEventListener('change', aplicarFiltros);
+document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+
+function aplicarFiltros(){
+  const doctorId = document.getElementById('filtroDoctor').value;
+  const estado   = document.getElementById('filtroEstado').value;
+
+  let lista = todasCitas;
+  if(doctorId) lista = lista.filter(c => String(c.doctor?.idDoctor ?? c.doctor?.id) === doctorId);
+  if(estado)   lista = lista.filter(c => c.estado === estado);
+
+  renderTabla(lista);
+  actualizarResumen(lista);
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function renderTabla(lista){
+  const tbody = document.getElementById('tbody');
+  if(!lista.length){
+    tbody.innerHTML = '<tr><td colspan="7" class="muted">No hay citas para los filtros seleccionados.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(c => {
+    const hora      = c.fechaHora ? new Date(c.fechaHora).toLocaleTimeString('es-CR', {hour:'2-digit', minute:'2-digit'}) : '—';
+    const paciente  = c.paciente  ? `${c.paciente.nombre} ${c.paciente.apellido}` : '—';
+    const doctor    = c.doctor    ? `${c.doctor.nombre} ${c.doctor.apellido}`     : '—';
+    const especialidad = c.especialidad?.nomEspecialidad ?? c.especialidad?.nombre ?? '—';
+    const estado    = c.estado ?? '—';
+    const id        = c.idCita;
+
+    const btnCancelar = (estado === 'PROGRAMADA')
+      ? `<button class="btn btn-danger btn-sm" onclick="abrirModalCancelar(${id}, '${paciente}', '${hora}')">Cancelar</button>`
+      : '';
+
+    return `
+      <tr>
+        <td>${hora}</td>
+        <td>${paciente}</td>
+        <td>${doctor}</td>
+        <td>${especialidad}</td>
+        <td>${c.motivo ?? '—'}</td>
+        <td><span class="badge ${estado}">${estado}</span></td>
+        <td>${btnCancelar}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function actualizarResumen(lista){
+  document.getElementById('totalCitas').textContent      = lista.length;
+  document.getElementById('totalProgramadas').textContent = lista.filter(c=>c.estado==='PROGRAMADA').length;
+  document.getElementById('totalAtendidas').textContent   = lista.filter(c=>c.estado==='ATENDIDA').length;
+  document.getElementById('totalCanceladas').textContent  = lista.filter(c=>c.estado==='CANCELADA').length;
+}
+
+// ── Cancelar ─────────────────────────────────────────────────────
+function abrirModalCancelar(id, paciente, hora){
+  pendingCancelId = id;
+  document.getElementById('modalTexto').textContent =
+    `¿Cancelar la cita de ${paciente} a las ${hora}?`;
+  document.getElementById('modalCancelar').classList.add('open');
+}
+
+function cerrarModal(){
+  document.getElementById('modalCancelar').classList.remove('open');
+  pendingCancelId = null;
+}
+
+async function confirmarCancelar(){
+  if(!pendingCancelId) return;
+  const h = authHeaders(); if(!h) return;
+  try{
+    const res = await fetch(`/api/citas/${pendingCancelId}/cancelar`, {method:'PUT', headers:h});
+    if(!checkAuth(res)) return;
+    if(!res.ok) throw new Error();
+    cerrarModal();
+    mostrarAlerta('ok', 'Cita cancelada correctamente.');
+    await cargar();
+  } catch {
+    cerrarModal();
+    mostrarAlerta('err', 'No se pudo cancelar la cita.');
+  }
+}
+
+document.getElementById('modalCancelar').addEventListener('click', (e) => {
+  if(e.target === document.getElementById('modalCancelar')) cerrarModal();
+});
+
+// ── Helpers ──────────────────────────────────────────────────────
+function mostrarAlerta(tipo, msg){
+  const el = document.getElementById('alertGlobal');
+  el.className = `alert ${tipo}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display='none', 3500);
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+(async()=>{
+  await cargarDoctores();
+  await cargar();
+})();
+</script>
+</body>
+</html>

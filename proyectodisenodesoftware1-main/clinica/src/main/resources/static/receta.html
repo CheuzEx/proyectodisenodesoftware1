@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clínica | Crear receta</title>
+
+    <style>
+        :root { --primary:#2563eb; --danger:#ef4444; }
+        body { font-family: system-ui; margin:0; background:#fff; color:#111; }
+
+        header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:1rem;
+            border-bottom:1px solid #e5e7eb;
+        }
+
+        .btn {
+            padding:.5rem .8rem;
+            border:1px solid #d1d5db;
+            background:#fff;
+            border-radius:8px;
+            cursor:pointer;
+            text-decoration:none;
+            color:#111;
+        }
+
+        .btn.primary {
+            background:var(--primary);
+            color:#fff;
+            border-color:var(--primary);
+        }
+
+        main {
+            padding:1rem;
+            max-width:700px;
+        }
+
+        .card {
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            padding:1rem;
+        }
+
+        .field {
+            display:grid;
+            gap:.3rem;
+            margin-bottom:1rem;
+        }
+
+        input, textarea {
+            padding:.6rem;
+            border:1px solid #d1d5db;
+            border-radius:8px;
+            font-size:1rem;
+        }
+
+        textarea {
+            min-height:80px;
+        }
+
+        .actions {
+            display:flex;
+            justify-content:flex-end;
+            gap:.5rem;
+        }
+
+        .muted {
+            color:#6b7280;
+        }
+
+        .error {
+            color:#ef4444;
+            margin-bottom:1rem;
+        }
+
+        .success {
+            color:#16a34a;
+            margin-bottom:1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Crear receta</h1>
+    <div>
+        <a class="btn" href="/citas.html">Volver a citas</a>
+        <button class="btn" onclick="logout()">Salir</button>
+    </div>
+</header>
+
+<main>
+    <section class="card">
+        <p class="muted" id="infoCita"></p>
+
+        <div id="msg"></div>
+
+        <div class="field">
+            <label for="medicamento">Medicamento</label>
+            <input id="medicamento" type="text">
+        </div>
+
+        <div class="field">
+            <label for="dosis">Dosis</label>
+            <input id="dosis" type="text">
+        </div>
+
+        <div class="field">
+            <label for="frecuencia">Frecuencia</label>
+            <input id="frecuencia" type="text">
+        </div>
+
+        <div class="field">
+            <label for="duracion">Duración en días</label>
+            <input id="duracion" type="number" min="1">
+        </div>
+
+        <div class="actions">
+            <a class="btn" href="/citas.html">No Generar</a>
+            <button class="btn primary" id="btnGuardar">Guardar receta</button>
+        </div>
+    </section>
+</main>
+
+<script>
+    function getToken(){
+        return localStorage.getItem('jwt_token');
+    }
+
+    function authHeaders(){
+        const t = getToken();
+
+        if(!t){
+            location.href = "/login.html";
+            return null;
+        }
+
+        return {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + t
+        };
+    }
+
+    function logout(){
+        localStorage.clear();
+        location.href = "/login.html";
+    }
+
+    async function apiFetch(url, options = {}){
+        const headers = authHeaders();
+        if(!headers) return null;
+
+        const res = await fetch(url, {
+            ...options,
+            headers: {
+                ...headers,
+                ...(options.headers || {})
+            }
+        });
+
+        if(res.status === 401 || res.status === 403){
+            logout();
+            return null;
+        }
+
+        return res;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const citaId = params.get("citaId");
+
+    const msg = document.getElementById("msg");
+    const infoCita = document.getElementById("infoCita");
+
+    if(!citaId){
+        msg.innerHTML = `<p class="error">No se recibió el ID de la cita.</p>`;
+        document.getElementById("btnGuardar").disabled = true;
+    } else {
+        infoCita.textContent = "Receta para la cita #" + citaId;
+    }
+
+    document.getElementById("btnGuardar").onclick = async () => {
+        msg.innerHTML = "";
+
+        const payload = {
+            citaId: Number(citaId),
+            medicamento: document.getElementById("medicamento").value.trim(),
+            dosis: document.getElementById("dosis").value.trim(),
+            frecuencia: document.getElementById("frecuencia").value.trim(),
+            duracion: document.getElementById("duracion").value
+                ? Number(document.getElementById("duracion").value)
+                : null
+        };
+
+        if(!payload.medicamento || !payload.dosis){
+            msg.innerHTML = `<p class="error">Medicamento y dosis son obligatorios.</p>`;
+            return;
+        }
+
+        const btn = document.getElementById("btnGuardar");
+        btn.disabled = true;
+
+        const r = await apiFetch("/api/recetas", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+
+        if(!r){
+            btn.disabled = false;
+            return;
+        }
+
+        if(!r.ok){
+            let error = "No se pudo crear la receta.";
+
+            try {
+                const body = await r.json();
+                error = body.message ?? body.error ?? body.detail ?? JSON.stringify(body);
+            } catch {
+                error = await r.text().catch(() => error);
+            }
+
+            msg.innerHTML = `<p class="error">${error}</p>`;
+            btn.disabled = false;
+            return;
+        }
+
+        msg.innerHTML = `<p class="success">Receta creada correctamente.</p>`;
+
+        setTimeout(() => {
+            location.href = "/citas.html";
+        }, 800);
+    };
+</script>
+
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clínica | Ver receta</title>
+
+    <style>
+        :root { --primary:#2563eb; }
+        body { font-family: system-ui; margin:0; background:#fff; color:#111; }
+
+        header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:1rem;
+            border-bottom:1px solid #e5e7eb;
+            position:sticky;
+            top:0;
+            background:#fff;
+        }
+
+        .header-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+
+        .row { padding:1rem; }
+
+        .card {
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            padding:1rem;
+        }
+
+        .btn {
+            padding:.5rem .8rem;
+            border:1px solid #d1d5db;
+            background:#fff;
+            border-radius:8px;
+            cursor:pointer;
+            text-decoration:none;
+            color:#111;
+            display:inline-block;
+        }
+
+        .btn.primary {
+            background:var(--primary);
+            color:#fff;
+            border-color:var(--primary);
+        }
+
+        .list {
+            display:flex;
+            flex-direction:column;
+            gap:.75rem;
+        }
+
+        .item {
+            border:1px solid #e5e7eb;
+            padding:1rem;
+            border-radius:10px;
+        }
+
+        .muted { color:#6b7280; }
+
+        .error { color:#ef4444; }
+    </style>
+</head>
+
+<body>
+
+<header>
+
+    <div class="header-actions">
+        <a class="btn" href="/">Menú principal</a>
+        <a class="btn primary" href="/citas.html">Volver a citas</a>
+        <button class="btn" onclick="logout()">Salir</button>
+    </div>
+</header>
+
+<main class="row">
+    <section class="card">
+        <p class="muted" id="infoCita"></p>
+        <div class="list" id="contenido">Cargando receta...</div>
+    </section>
+</main>
+
+<script>
+    function getToken(){
+        return localStorage.getItem('jwt_token');
+    }
+
+    function logout(){
+        localStorage.clear();
+        location.href = "/login.html";
+    }
+
+    async function apiFetch(url, options = {}){
+        const token = getToken();
+
+        if(!token){
+            location.href = "/login.html";
+            return null;
+        }
+
+        const res = await fetch(url, {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token,
+                ...(options.headers || {})
+            }
+        });
+
+        if(res.status === 401 || res.status === 403){
+            logout();
+            return null;
+        }
+
+        return res;
+    }
+
+    async function cargarReceta(){
+        const params = new URLSearchParams(window.location.search);
+        const citaId = params.get("citaId");
+
+        const contenido = document.getElementById("contenido");
+        const infoCita = document.getElementById("infoCita");
+
+        if(!citaId){
+            contenido.innerHTML = `<p class="error">No se recibió el ID de la cita.</p>`;
+            return;
+        }
+
+        infoCita.textContent = "Receta de la cita #" + citaId;
+
+        const r = await apiFetch(`/api/recetas/cita/${citaId}`);
+
+        if(!r) return;
+
+        if(!r.ok){
+            contenido.innerHTML = `<p class="error">No se pudo cargar la receta.</p>`;
+            return;
+        }
+
+        const recetas = await r.json();
+
+        if(!recetas.length){
+            contenido.innerHTML = `<p class="muted">No se generó receta para esta cita.</p>`;
+            return;
+        }
+
+        contenido.innerHTML = recetas.map(receta => `
+            <div class="item">
+                <p><strong>Medicamento:</strong> ${receta.medicamento ?? "—"}</p>
+                <p><strong>Dosis:</strong> ${receta.dosis ?? "—"}</p>
+                <p><strong>Frecuencia:</strong> ${receta.frecuencia ?? "No indicada"}</p>
+                <p><strong>Duración:</strong> ${receta.duracion ?? "No indicada"} días</p>
+            </div>
+        `).join("");
+    }
+
+    cargarReceta();
+</script>
+
+</body>
+</html>

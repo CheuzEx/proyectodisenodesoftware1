@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Especialidades del Doctor</title>
+
+    <style>
+        :root {
+            --primary: #1a56db;
+            --bg: #f4f6f9;
+            --card: #ffffff;
+            --border: #d1d5db;
+            --text: #111827;
+            --muted: #6b7280;
+            --danger: #dc2626;
+            --ok: #16a34a;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            color: var(--text);
+        }
+
+        header {
+            background: var(--primary);
+            color: #fff;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .btn-back {
+            color: #fff;
+            text-decoration: none;
+            font-size: .9rem;
+            border: 1px solid rgba(255,255,255,.4);
+            padding: 6px 12px;
+            border-radius: 8px;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 28px auto;
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 24px;
+        }
+
+        @media(max-width: 800px) {
+            main { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 0 0 16px;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: .9rem;
+        }
+
+        .doctor-name {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .esp-list {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .esp-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            cursor: pointer;
+            font-size: .9rem;
+        }
+
+        .esp-item:last-child {
+            border-bottom: none;
+        }
+
+        .esp-item:hover {
+            background: #f8f9ff;
+        }
+
+        .esp-item input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: .9rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-outline {
+            background: #fff;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
+
+        .alert {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: .88rem;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .alert.ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .alert.err {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Especialidades del Doctor</h1>
+    <a class="btn-back" href="/admin_doctores.html">Volver a doctores</a>
+</header>
+
+<main>
+    <div class="card">
+        <p class="card-title">Doctor seleccionado</p>
+
+        <div id="doctorInfo" class="muted">Cargando doctor...</div>
+
+        <div id="alerta" class="alert"></div>
+
+        <div class="actions">
+            <button class="btn btn-primary" id="btnGuardar" onclick="guardar()">Guardar cambios</button>
+            <button class="btn btn-outline" onclick="location.href='/admin_doctores.html'">Cancelar</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <p class="card-title">Especialidades disponibles</p>
+        <div id="listaEspecialidades" class="muted">Cargando especialidades...</div>
+    </div>
+</main>
+
+<script>
+    function getToken() {
+        return localStorage.getItem('jwt_token');
+    }
+
+    function authHeaders() {
+        const token = getToken();
+
+        if (!token) {
+            location.href = '/login.html';
+            return null;
+        }
+
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+
+    function checkAuth(res) {
+        if (res.status === 401 || res.status === 403) {
+            location.href = '/login.html';
+            return false;
+        }
+
+        return true;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const doctorId = params.get('doctorId');
+
+    let todasEspecialidades = [];
+    let especialidadesDoctor = [];
+
+    async function cargar() {
+        if (!doctorId) {
+            mostrar('err', 'No se recibio el doctorId.');
+            document.getElementById('listaEspecialidades').textContent = 'No se puede cargar la información.';
+            return;
+        }
+
+        const headers = authHeaders();
+        if (!headers) return;
+
+        try {
+            const doctorRes = await fetch(`/api/doctores/${doctorId}`, { headers });
+            if (!checkAuth(doctorRes)) return;
+            if (!doctorRes.ok) throw new Error('No se pudo cargar el doctor.');
+
+            const doctor = await doctorRes.json();
+
+            document.getElementById('doctorInfo').innerHTML = `
+        <div class="doctor-name">Dr. ${doctor.nombre ?? ''} ${doctor.apellido ?? ''}</div>
+        <div class="muted">ID: ${doctor.idDoctor ?? doctor.id ?? doctorId}</div>
+      `;
+
+            const espRes = await fetch('/api/especialidades', { headers });
+            if (!checkAuth(espRes)) return;
+            if (!espRes.ok) throw new Error('No se pudieron cargar las especialidades.');
+
+            todasEspecialidades = await espRes.json();
+
+            const doctorEspRes = await fetch(`/api/doctores/${doctorId}/especialidades`, { headers });
+            if (!checkAuth(doctorEspRes)) return;
+            if (!doctorEspRes.ok) throw new Error('No se pudieron cargar las especialidades del doctor.');
+
+            especialidadesDoctor = await doctorEspRes.json();
+
+            render();
+        } catch (e) {
+            mostrar('err', e.message || 'Error cargando datos.');
+            document.getElementById('listaEspecialidades').textContent = 'No se pudieron cargar las especialidades.';
+        }
+    }
+
+    function render() {
+        const cont = document.getElementById('listaEspecialidades');
+
+        if (!todasEspecialidades || todasEspecialidades.length === 0) {
+            cont.innerHTML = '<p class="muted">No hay especialidades registradas.</p>';
+            return;
+        }
+
+        const idsDoctor = especialidadesDoctor.map(e => Number(e.idEspecialidad ?? e.id));
+
+        cont.className = 'esp-list';
+
+        cont.innerHTML = todasEspecialidades.map(e => {
+            const id = Number(e.idEspecialidad ?? e.id);
+            const nombre = e.nomEspecialidad ?? e.nombre ?? 'Sin nombre';
+            const checked = idsDoctor.includes(id) ? 'checked' : '';
+
+            return `
+        <label class="esp-item">
+          <input type="checkbox" value="${id}" ${checked}>
+          <span>${nombre}</span>
+        </label>
+      `;
+        }).join('');
+    }
+
+    async function guardar() {
+        const headers = authHeaders();
+        if (!headers) return;
+
+        const btn = document.getElementById('btnGuardar');
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
+
+        const ids = Array.from(document.querySelectorAll('#listaEspecialidades input:checked'))
+            .map(chk => Number(chk.value));
+
+        try {
+            const res = await fetch(`/api/doctores/${doctorId}/especialidades`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(ids)
+            });
+
+            if (!checkAuth(res)) return;
+
+            if (!res.ok) {
+                let msg = 'No se pudieron guardar las especialidades.';
+                try {
+                    const body = await res.json();
+                    msg = body.message ?? body.error ?? msg;
+                } catch {
+                    msg = await res.text().catch(() => msg);
+                }
+
+                throw new Error(msg);
+            }
+
+            mostrar('ok', 'Especialidades actualizadas correctamente.');
+
+            setTimeout(() => {
+                location.href = '/admin_doctores.html';
+            }, 1000);
+        } catch (e) {
+            mostrar('err', e.message || 'No se pudieron guardar las especialidades.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Guardar cambios';
+        }
+    }
+
+    function mostrar(tipo, msg) {
+        const el = document.getElementById('alerta');
+        el.className = `alert ${tipo}`;
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    cargar();
+</script>
+
+</body>
+</html>

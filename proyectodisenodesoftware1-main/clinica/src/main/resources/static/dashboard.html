@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel Principal — Clinica</title>
+    <style>
+        :root { --primary: #1a56db; --bg: #f4f6f9; --card: #ffffff; --border: #d1d5db; --text: #111827; --muted: #6b7280; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: var(--bg); margin: 0; color: var(--text); }
+        header { background: var(--primary); color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { margin: 0; font-size: 1.2rem; }
+        .btn-logout { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: .9rem; }
+        .rol-badge { font-size: .8rem; background: rgba(255,255,255,.2); padding: 3px 10px; border-radius: 999px; margin-left: 10px; }
+        main { max-width: 900px; margin: 40px auto; padding: 0 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px 20px; text-align: center; transition: box-shadow .2s; }
+        .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+        .card h2 { font-size: 1rem; margin: 0 0 10px; color: var(--text); }
+        .card a { color: var(--primary); text-decoration: none; font-size: .9rem; }
+        .card a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<header>
+    <div style="display:flex; align-items:center;">
+        <h1 id="bienvenida">Bienvenido</h1>
+        <span class="rol-badge" id="rolBadge"></span>
+    </div>
+    <button class="btn-logout" onclick="logout()">Cerrar sesion</button>
+</header>
+
+<main id="menu"></main>
+
+<script>
+    function getToken(){ return localStorage.getItem('jwt_token'); }
+    function authHeaders(){
+      const token = getToken();
+      if(!token){ window.location.href='/login.html'; return null; }
+      return { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` };
+    }
+    function logout(){ localStorage.clear(); window.location.href='/login.html'; }
+
+    const MENUS = {
+  ROLE_ADMIN: [
+    { titulo: 'Gestionar Doctores',       link: '/admin_doctores.html',       desc: 'Ver, crear y editar doctores' },
+    { titulo: 'Gestionar Pacientes',      link: '/pacientes/vista',            desc: 'Ver, crear y eliminar pacientes' },
+    { titulo: 'Gestionar Especialidades', link: '/admin_especialidades.html',  desc: 'Administrar especialidades' },
+    { titulo: 'Todas las Citas',          link: '/admin_citas.html',           desc: 'Ver citas de todos los doctores' },
+  ],
+  ROLE_DOCTOR: [
+    { titulo: 'Mi Perfil',        link: '/doctor',            desc: 'Ver y editar mi informacion' },
+    { titulo: 'Mis Citas',        link: '/citas/vista',       desc: 'Ver y asignar citas del dia' },
+    { titulo: 'Historial Medico', link: '/historiales/vista', desc: 'Consultar historial de pacientes' },
+    { titulo: 'Pacientes',        link: '/pacientes/vista',   desc: 'Ver lista de pacientes' },
+  ]
+};
+
+    function renderMenu(rol) {
+      const opciones = MENUS[rol] || MENUS['ROLE_DOCTOR'];
+      document.getElementById('menu').innerHTML = opciones.map(o => `
+        <div class="card">
+          <h2>${o.titulo}</h2>
+          <a href="${o.link}">${o.desc}</a>
+        </div>
+      `).join('');
+    }
+
+    (async () => {
+      const headers = authHeaders();
+      if (!headers) return;
+
+      const rol = localStorage.getItem('rol') || '';
+      document.getElementById('rolBadge').textContent = rol === 'ROLE_ADMIN' ? 'Administrador' : 'Doctor';
+      renderMenu(rol);
+
+      // Si es doctor, cargar su nombre
+      if (rol === 'ROLE_DOCTOR') {
+        try {
+          const res = await fetch('/api/doctores/me', { headers });
+          if (res.status === 401 || res.status === 403) { logout(); return; }
+          if (!res.ok) return;
+          const d = await res.json();
+          const nombre = [d.nombre, d.apellido].filter(Boolean).join(' ');
+          if (nombre) document.getElementById('bienvenida').textContent = `Bienvenido, Dr. ${nombre}`;
+        } catch(e) {}
+      } else {
+        const username = localStorage.getItem('username') || 'Admin';
+        document.getElementById('bienvenida').textContent = `Bienvenido, ${username}`;
+      }
+    })();
+</script>
+</body>
+</html>

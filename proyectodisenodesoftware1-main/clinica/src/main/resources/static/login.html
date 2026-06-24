@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Iniciar sesión — Clinica</title>
+<style>
+:root { --primary: #1a56db; --bg: #f4f6f9; --card: #ffffff; --border: #d1d5db; --text: #111827; --muted: #6b7280; --danger: #dc2626; }
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: var(--text); }
+.card { background: var(--card); padding: 40px; border-radius: 12px; width: 100%; max-width: 380px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+h1 { text-align: center; font-size: 1.4rem; margin: 0 0 24px; color: var(--primary); }
+label { display: block; font-size: .85rem; font-weight: bold; margin-bottom: 4px; }
+input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; margin-bottom: 14px; }
+input:focus { outline: none; border-color: var(--primary); }
+button { width: 100%; padding: 11px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+button:disabled { opacity: .6; cursor: default; }
+.alert { display: none; background: #fee2e2; color: var(--danger); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Clinica</h1>
+  <div id="error" class="alert"></div>
+  <form id="loginForm">
+    <label for="user">Usuario</label>
+    <input id="user" required autocomplete="username" />
+    <label for="pass">Contrasena</label>
+    <input id="pass" type="password" required autocomplete="current-password" />
+    <button id="btn">Iniciar sesion</button>
+  </form>
+</div>
+<script>
+if(localStorage.getItem("jwt_token")) location.href="/";
+const errBox = document.getElementById("error");
+function showError(msg){ errBox.textContent=msg; errBox.style.display="block"; }
+function hideError(){ errBox.style.display="none"; }
+document.getElementById("user").oninput = hideError;
+document.getElementById("pass").oninput = hideError;
+document.getElementById("loginForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const btn = document.getElementById("btn");
+  btn.disabled=true; btn.textContent="Ingresando...";
+  hideError();
+  const username = document.getElementById("user").value.trim();
+  const password = document.getElementById("pass").value;
+  try{
+    const res = await fetch("/api/auth/login",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({username,password}) });
+    if(res.status===401||res.status===403){ showError("Usuario o contrasena incorrectos"); return; }
+    if(!res.ok){ showError("Error del servidor"); return; }
+    const data = await res.json();
+    if(!data?.token){ showError("Respuesta invalida del servidor"); return; }
+    localStorage.clear();
+    localStorage.setItem("jwt_token", data.token);
+    localStorage.setItem("rol", data.rol??"");
+    localStorage.setItem("username", data.username??username);
+    location.href="/";
+  }catch(err){ showError("No se pudo conectar con el servidor"); }
+  finally{ btn.disabled=false; btn.textContent="Iniciar sesion"; }
+});
+</script>
+</body>
+</html>

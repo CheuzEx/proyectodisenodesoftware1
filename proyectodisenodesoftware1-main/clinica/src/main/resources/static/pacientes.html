@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Pacientes</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; }
+        header { background: #1a56db; color: #fff; padding: 16px 24px; }
+        main { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; padding: 24px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid #ececec; text-align: left; }
+        th { background: #e7f1ff; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,.08); padding: 16px; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #dbe7ff; border-radius: 8px; box-sizing: border-box; }
+        button { padding: 8px 12px; border: none; border-radius: 8px; background: #1a56db; color: #fff; cursor: pointer; }
+        .danger { background: #c0392b; }
+        .muted { color: #6b7280; }
+        a.btn, button.btn { display: inline-block; margin: 0 0 12px; padding: 8px 12px; background: #e7f1ff; color: #073b63; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; }
+        .row { display: flex; gap: 8px; align-items: center; }
+        .right { margin-left: auto; }
+        .hidden { display: none; }
+        .actions button, .actions a { margin-right: 6px; }
+        .subrow { background: #fbfdff; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #eef6ff; color: #073b63; font-size: 12px; }
+        .alert { padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
+        .alert.warn { background: #fff3cd; color: #7a5e00; border: 1px solid #ffe69c; }
+        .alert.ok   { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+        .alert.err  { background: #ffebee; color: #b71c1c; border: 1px solid #ef9a9a; }
+        @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+        .fab-home { position: fixed; right: 20px; bottom: 20px; background: #1a56db; color: #fff; border-radius: 999px; padding: 12px 16px; text-decoration: none; box-shadow: 0 6px 16px rgba(0,0,0,.15); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: #fff; border-radius: 12px; max-width: 520px; width: 92%; padding: 20px; box-shadow: 0 10px 24px rgba(0,0,0,.25); }
+        .modal h3 { margin: 0 0 8px 0; }
+        .modal p  { margin: 8px 0 16px 0; }
+        .modal .actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-outline { background: #eef6ff; color: #073b63; border: 1px solid #dbe7ff; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+        label { display: block; margin: 8px 0 3px; font-size: .9rem; }
+    </style>
+</head>
+<body>
+<header><h2>Pacientes</h2></header>
+
+<main>
+    <section class="card">
+        <div class="row" style="justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+            <a class="btn" href="/">← Volver</a>
+            <div class="row" style="gap:6px;">
+                <input type="number" min="1" id="searchId" placeholder="Buscar por ID…" style="width:200px" />
+                <button onclick="buscarPorId()">Buscar</button>
+                <button class="btn" onclick="limpiarBusqueda()">Limpiar</button>
+            </div>
+            <button id="btnToggleCrear" class="btn right" type="button">＋ Crear paciente</button>
+            <span class="muted" id="labelTotal">Total: 0</span>
+        </div>
+
+        <div id="mensajeGlobal" class="hidden"></div>
+
+        <table id="tablaPacientes">
+            <thead><tr><th>ID</th><th>Nombre</th><th>Apellido</th><th>Acciones</th></tr></thead>
+            <tbody id="tbody"><tr><td colspan="4" class="muted">Cargando…</td></tr></tbody>
+        </table>
+    </section>
+
+    <aside class="card">
+        <h3>Acciones</h3>
+        <section id="panelCrear" class="hidden">
+            <h4>Crear paciente</h4>
+            <div id="alertCrear" class="hidden"></div>
+            <form id="formCrear">
+                <label>Nombre<input name="nombre" required /></label>
+                <label>Apellido<input name="apellido" required /></label>
+                <label>Fecha Nac.<input type="date" name="fechaNacimiento" required /></label>
+                <label>Sexo
+                    <select name="sexo">
+                        <option value="">—</option>
+                        <option value="M">M</option>
+                        <option value="F">F</option>
+                    </select>
+                </label>
+                <label>Dirección<input name="direccion" /></label>
+                <label>Teléfono<input name="telefono" /></label>
+                <label>Correo<input type="email" name="correo" /></label>
+                <div class="row" style="margin-top:8px;">
+                    <button type="submit">Guardar</button>
+                    <button type="button" class="btn" id="btnCancelarCrear">Cancelar</button>
+                </div>
+                <p class="muted" style="margin-top:8px;">Al crear un paciente se generará automáticamente un historial médico vacío.</p>
+            </form>
+        </section>
+
+        <section id="panelEditar" class="hidden">
+            <h4 id="tituloEditar">Editar paciente</h4>
+            <div id="alertEditar" class="hidden"></div>
+            <form id="formEditar">
+                <input type="hidden" id="edit_id" />
+                <label>Nombre<input id="edit_nombre" required /></label>
+                <label>Apellido<input id="edit_apellido" required /></label>
+                <label>Fecha Nac.<input type="date" id="edit_fechaNacimiento" required /></label>
+                <label>Sexo
+                    <select id="edit_sexo">
+                        <option value="">—</option>
+                        <option value="M">M</option>
+                        <option value="F">F</option>
+                    </select>
+                </label>
+                <label>Dirección<input id="edit_direccion" /></label>
+                <label>Teléfono<input id="edit_telefono" /></label>
+                <label>Correo<input type="email" id="edit_correo" /></label>
+                <div class="row" style="margin-top:8px;">
+                    <button type="submit">Actualizar</button>
+                    <button type="button" class="btn" id="btnCancelarEditar">Cancelar</button>
+                </div>
+            </form>
+        </section>
+    </aside>
+</main>
+
+<a class="fab-home" href="/">Menú principal</a>
+
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal">
+        <h3>Confirmar eliminación</h3>
+        <p id="confirmText">¿Eliminar este paciente?</p>
+        <div class="actions">
+            <button class="btn-outline" id="btnCancelDelete">Cancelar</button>
+            <button class="danger" id="btnConfirmDelete">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── JWT helpers ────────────────────────────────────────────────
+    function getToken() { return localStorage.getItem('jwt_token'); }
+
+    function authHeaders() {
+        const token = getToken();
+        if (!token) { window.location.href = '/login.html'; return null; }
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+
+    function checkAuth(res) {
+        if (res.status === 401 || res.status === 403) {
+            window.location.href = '/login.html';
+            return false;
+        }
+        return true;
+    }
+
+    let todos = [];
+    let pendingDeleteId = null;
+
+    // ── Carga inicial ──────────────────────────────────────────────
+    async function cargarPacientes() {
+        const headers = authHeaders();
+        if (!headers) return;
+        try {
+            const res = await fetch('/api/pacientes', { headers });
+            if (!checkAuth(res)) return;
+            if (!res.ok) throw new Error();
+            todos = await res.json();
+            renderTabla(todos);
+        } catch {
+            mostrarMensaje('err', 'No se pudieron cargar los pacientes.');
+        }
+    }
+
+    // ── Render tabla ───────────────────────────────────────────────
+    function renderTabla(lista) {
+        document.getElementById('labelTotal').textContent = `Total: ${lista.length}`;
+        const tbody = document.getElementById('tbody');
+        if (!lista.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="muted">No hay pacientes para mostrar.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = lista.map((p, idx) => {
+            const fmtFecha = (f) => f ? new Date(f).toLocaleDateString('es-CR') : '—';
+            return `
+                <tr>
+                    <td>${p.idPaciente}</td>
+                    <td>${p.nombre || ''}</td>
+                    <td>${p.apellido || ''}</td>
+                    <td class="actions">
+                        <button class="btn btn-ver" data-target="det-${idx}">Ver más</button>
+                        <button class="btn btn-editar"
+                            data-id="${p.idPaciente}"
+                            data-nombre="${p.nombre || ''}"
+                            data-apellido="${p.apellido || ''}"
+                            data-fecha="${p.fechaNacimiento ? p.fechaNacimiento.split('T')[0] : ''}"
+                            data-sexo="${p.sexo || ''}"
+                            data-direccion="${p.direccion || ''}"
+                            data-telefono="${p.telefono || ''}"
+                            data-correo="${p.correo || ''}">Editar</button>
+                        <button class="danger btn-eliminar"
+                            data-id="${p.idPaciente}"
+                            data-nombre="${p.nombre || ''}"
+                            data-apellido="${p.apellido || ''}">Eliminar</button>
+                    </td>
+                </tr>
+                <tr class="subrow hidden" id="det-${idx}">
+                    <td colspan="4">
+                        <div class="row" style="gap:24px; flex-wrap:wrap;">
+                            <div><span class="badge">Sexo</span><div>${p.sexo || '—'}</div></div>
+                            <div><span class="badge">Fecha Nac.</span><div>${fmtFecha(p.fechaNacimiento)}</div></div>
+                            <div><span class="badge">Correo</span><div>${p.correo || '—'}</div></div>
+                            <div><span class="badge">Teléfono</span><div>${p.telefono || '—'}</div></div>
+                            <div><span class="badge">Dirección</span><div>${p.direccion || '—'}</div></div>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    function buscarPorId() {
+        const id = document.getElementById('searchId').value.trim();
+        if (!id) { renderTabla(todos); return; }
+        renderTabla(todos.filter(p => String(p.idPaciente) === id));
+    }
+
+    function limpiarBusqueda() {
+        document.getElementById('searchId').value = '';
+        renderTabla(todos);
+    }
+
+    // ── Delegación de clicks en tabla ──────────────────────────────
+    document.getElementById('tbody').addEventListener('click', (e) => {
+        const btnVer = e.target.closest('.btn-ver');
+        if (btnVer) {
+            const row = document.getElementById(btnVer.getAttribute('data-target'));
+            if (row) {
+                row.classList.toggle('hidden');
+                btnVer.textContent = row.classList.contains('hidden') ? 'Ver más' : 'Ver menos';
+            }
+            return;
+        }
+        const btnEditar = e.target.closest('.btn-editar');
+        if (btnEditar) { abrirEditar(btnEditar.dataset); return; }
+
+        const btnEliminar = e.target.closest('.btn-eliminar');
+        if (btnEliminar) { abrirModalEliminar(btnEliminar.dataset); }
+    });
+
+    // ── Panel Crear ────────────────────────────────────────────────
+    document.getElementById('btnToggleCrear').addEventListener('click', () => {
+        document.getElementById('panelCrear').classList.toggle('hidden');
+        document.getElementById('panelEditar').classList.add('hidden');
+    });
+    document.getElementById('btnCancelarCrear').addEventListener('click', () => {
+        document.getElementById('panelCrear').classList.add('hidden');
+        document.getElementById('formCrear').reset();
+    });
+
+    document.getElementById('formCrear').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const headers = authHeaders();
+        if (!headers) return;
+        const fd = new FormData(e.target);
+        const payload = {
+            nombre:          fd.get('nombre').trim(),
+            apellido:        fd.get('apellido').trim(),
+            fechaNacimiento: fd.get('fechaNacimiento') || null,
+            sexo:            fd.get('sexo') || null,
+            direccion:       fd.get('direccion').trim() || null,
+            telefono:        fd.get('telefono').trim() || null,
+            correo:          fd.get('correo').trim() || null
+        };
+        try {
+            const res = await fetch('/api/pacientes', {
+                method: 'POST', headers, body: JSON.stringify(payload)
+            });
+            if (!checkAuth(res)) return;
+            if (!res.ok) throw new Error(await res.text());
+            mostrarAlerta('alertCrear', 'ok', 'Paciente creado correctamente.');
+            e.target.reset();
+            await cargarPacientes();
+            setTimeout(() => document.getElementById('panelCrear').classList.add('hidden'), 1200);
+        } catch (err) {
+            mostrarAlerta('alertCrear', 'err', err.message || 'No se pudo crear el paciente.');
+        }
+    });
+
+    // ── Panel Editar ───────────────────────────────────────────────
+    function abrirEditar(data) {
+        document.getElementById('panelCrear').classList.add('hidden');
+        document.getElementById('panelEditar').classList.remove('hidden');
+        document.getElementById('tituloEditar').textContent        = `Editar paciente #${data.id}`;
+        document.getElementById('edit_id').value                   = data.id;
+        document.getElementById('edit_nombre').value               = data.nombre;
+        document.getElementById('edit_apellido').value             = data.apellido;
+        document.getElementById('edit_fechaNacimiento').value      = data.fecha;
+        document.getElementById('edit_sexo').value                 = data.sexo;
+        document.getElementById('edit_direccion').value            = data.direccion;
+        document.getElementById('edit_telefono').value             = data.telefono;
+        document.getElementById('edit_correo').value               = data.correo;
+        document.getElementById('alertEditar').classList.add('hidden');
+    }
+
+    document.getElementById('btnCancelarEditar').addEventListener('click', () => {
+        document.getElementById('panelEditar').classList.add('hidden');
+    });
+
+    document.getElementById('formEditar').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const headers = authHeaders();
+        if (!headers) return;
+        const id = document.getElementById('edit_id').value;
+        const payload = {
+            nombre:          document.getElementById('edit_nombre').value.trim(),
+            apellido:        document.getElementById('edit_apellido').value.trim(),
+            fechaNacimiento: document.getElementById('edit_fechaNacimiento').value || null,
+            sexo:            document.getElementById('edit_sexo').value || null,
+            direccion:       document.getElementById('edit_direccion').value.trim() || null,
+            telefono:        document.getElementById('edit_telefono').value.trim() || null,
+            correo:          document.getElementById('edit_correo').value.trim() || null
+        };
+        try {
+            const res = await fetch(`/api/pacientes/${id}`, {
+                method: 'PUT', headers, body: JSON.stringify(payload)
+            });
+            if (!checkAuth(res)) return;
+            if (!res.ok) throw new Error(await res.text());
+            mostrarAlerta('alertEditar', 'ok', 'Paciente actualizado correctamente.');
+            await cargarPacientes();
+            setTimeout(() => document.getElementById('panelEditar').classList.add('hidden'), 1200);
+        } catch (err) {
+            mostrarAlerta('alertEditar', 'err', err.message || 'No se pudo actualizar el paciente.');
+        }
+    });
+
+    // ── Modal Eliminar ─────────────────────────────────────────────
+    function abrirModalEliminar(data) {
+        pendingDeleteId = data.id;
+        document.getElementById('confirmText').textContent =
+            `¿Seguro que deseas eliminar al paciente #${data.id} (${data.nombre} ${data.apellido})? Esta acción no se puede deshacer.`;
+        document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+        if (!pendingDeleteId) return;
+        const headers = authHeaders();
+        if (!headers) return;
+        try {
+            const res = await fetch(`/api/pacientes/${pendingDeleteId}`, { method: 'DELETE', headers });
+            if (!checkAuth(res)) return;
+            if (!res.ok) throw new Error();
+            cerrarModal();
+            mostrarMensaje('ok', 'Paciente eliminado.');
+            await cargarPacientes();
+        } catch {
+            cerrarModal();
+            mostrarMensaje('err', 'No se pudo eliminar el paciente.');
+        }
+    });
+
+    document.getElementById('btnCancelDelete').addEventListener('click', cerrarModal);
+    document.getElementById('confirmModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('confirmModal')) cerrarModal();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModal(); });
+
+    function cerrarModal() {
+        document.getElementById('confirmModal').style.display = 'none';
+        pendingDeleteId = null;
+    }
+
+    // ── Helpers UI ─────────────────────────────────────────────────
+    function mostrarMensaje(tipo, msg) {
+        const el = document.getElementById('mensajeGlobal');
+        el.className = `alert ${tipo}`;
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+
+    function mostrarAlerta(id, tipo, msg) {
+        const el = document.getElementById(id);
+        el.className = `alert ${tipo}`;
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    }
+
+    cargarPacientes();
+</script>
+</body>
+</html>

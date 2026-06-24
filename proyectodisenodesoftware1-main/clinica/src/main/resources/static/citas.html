@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clínica | Citas</title>
+
+    <style>
+        :root { --primary:#2563eb; --muted:#f3f4f6; --danger:#ef4444; --ok:#16a34a; }
+        body { font-family: system-ui; margin:0; background:#fff; color:#111; }
+
+        header {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:1rem;
+            border-bottom:1px solid #e5e7eb;
+            position:sticky;
+            top:0;
+            background:#fff;
+        }
+
+        .header-actions {
+            display:flex;
+            gap:.5rem;
+            flex-wrap:wrap;
+        }
+
+        .row {
+            display:grid;
+            grid-template-columns:1fr;
+            gap:1rem;
+            padding:1rem;
+        }
+
+        .card {
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+        }
+
+        .toolbar {
+            display:flex;
+            gap:.75rem;
+            align-items:end;
+            flex-wrap:wrap;
+            padding:1rem;
+            border-bottom:1px solid #e5e7eb;
+        }
+
+        .field { display:grid; gap:.3rem; }
+        .field input, .field select, .field textarea {
+            padding:.5rem;
+            border:1px solid #d1d5db;
+            border-radius:8px;
+        }
+
+        .btn {
+            padding:.5rem .8rem;
+            border:1px solid #d1d5db;
+            background:#fff;
+            border-radius:8px;
+            cursor:pointer;
+            text-decoration:none;
+            color:#111;
+            display:inline-block;
+        }
+
+        .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+        .btn.danger { background:var(--danger); color:#fff; }
+        .btn.ok { background:var(--ok); color:#fff; }
+
+        .list {
+            display:flex;
+            flex-direction:column;
+            gap:.5rem;
+            padding:1rem;
+        }
+
+        .item {
+            border:1px solid #e5e7eb;
+            padding:.75rem;
+            border-radius:10px;
+            display:flex;
+            justify-content:space-between;
+            gap:1rem;
+            align-items:center;
+        }
+
+        .muted { color:#6b7280; }
+
+        dialog {
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            width:90%;
+            max-width:600px;
+        }
+
+        dialog header {
+            display:flex;
+            justify-content:space-between;
+            padding:1rem;
+            border-bottom:1px solid #e5e7eb;
+        }
+
+        dialog .content {
+            padding:1rem;
+            display:grid;
+            gap:.75rem;
+        }
+
+        .actions {
+            display:flex;
+            justify-content:flex-end;
+            gap:.5rem;
+            padding:1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Citas</h1>
+    <div class="header-actions">
+        <a class="btn" href="/">Menú principal</a>
+        <button class="btn primary" id="btnNueva">Nueva cita</button>
+        <button class="btn" onclick="logout()">Salir</button>
+    </div>
+</header>
+
+<main class="row">
+    <section class="card">
+        <div class="toolbar">
+            <div class="field">
+                <label for="fechaFiltro">Fecha</label>
+                <input type="date" id="fechaFiltro">
+            </div>
+
+            <button class="btn primary" id="btnBuscar">Buscar</button>
+            <button class="btn" id="btnHoy">Hoy</button>
+        </div>
+
+        <div class="list" id="lista"></div>
+    </section>
+</main>
+
+<dialog id="dlgNueva">
+    <header>
+        <strong>Nueva cita</strong>
+        <button class="btn" id="dlgClose">X</button>
+    </header>
+
+    <div class="content">
+        <div class="field">
+            <label>Fecha</label>
+            <input type="date" id="nc_fecha">
+        </div>
+
+        <div class="field">
+            <label>Hora</label>
+            <input type="time" id="nc_hora">
+        </div>
+
+        <div class="field">
+            <label>Paciente</label>
+            <select id="nc_paciente"></select>
+        </div>
+
+        <div class="field">
+            <label>Especialidad</label>
+            <select id="nc_especialidad"></select>
+        </div>
+
+        <div class="field">
+            <label>Motivo</label>
+            <textarea id="nc_motivo"></textarea>
+        </div>
+
+        <div id="dlgError" class="muted"></div>
+    </div>
+
+    <div class="actions">
+        <button class="btn" id="dlgCancel">Cancelar</button>
+        <button class="btn primary" id="dlgCreate">Crear</button>
+    </div>
+</dialog>
+
+<script>
+    function getToken(){
+        return localStorage.getItem('jwt_token');
+    }
+
+    function authHeaders(){
+        const t = getToken();
+
+        if(!t){
+            location.href = "/login.html";
+            return null;
+        }
+
+        return {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + t
+        };
+    }
+
+    function logout(){
+        localStorage.clear();
+        location.href = "/login.html";
+    }
+
+    async function apiFetch(url, options = {}){
+        const headers = authHeaders();
+        if(!headers) return null;
+
+        const res = await fetch(url, {
+            ...options,
+            headers
+        });
+
+        if(res.status === 401 || res.status === 403){
+            logout();
+            return null;
+        }
+
+        return res;
+    }
+
+    let DOCTOR_ID = null;
+
+    function fechaHoy(){
+        return new Date().toISOString().slice(0,10);
+    }
+
+    async function loadDoctor(){
+        const r = await apiFetch("/api/doctores/me");
+        if(!r) return;
+
+        const d = await r.json();
+        DOCTOR_ID = d.idDoctor ?? d.id ?? null;
+    }
+
+    async function cargarCitas(){
+        if(!DOCTOR_ID) return;
+
+        const fecha = document.getElementById("fechaFiltro").value;
+
+        if(!fecha){
+            document.getElementById("lista").innerHTML =
+                "<p class='muted'>Selecciona una fecha.</p>";
+            return;
+        }
+
+        const r = await apiFetch(`/api/citas/dia?doctorId=${DOCTOR_ID}&fecha=${fecha}`);
+        if(!r) return;
+
+        const data = await r.json();
+        render(data, fecha);
+    }
+
+    function render(citas, fecha){
+        const lista = document.getElementById("lista");
+        lista.innerHTML = "";
+
+        if(!citas.length){
+            lista.innerHTML = `<p class='muted'>No hay citas para el día ${fecha}.</p>`;
+            return;
+        }
+
+        citas.forEach(c => {
+            const id = c.idCita ?? c.id;
+
+            const hora = c.fechaHora
+                ? new Date(c.fechaHora).toLocaleTimeString('es-CR', { hour:'2-digit', minute:'2-digit' })
+                : "—";
+
+            const paciente = c.paciente
+                ? `${c.paciente.nombre ?? ""} ${c.paciente.apellido ?? ""}`.trim()
+                : "Paciente no registrado";
+
+            const estado = c.estado ?? "PROGRAMADA";
+
+            const div = document.createElement("div");
+            div.className = "item";
+
+            div.innerHTML = `
+                <div>
+                    <strong>${hora}</strong><br>
+                    <span>${paciente}</span><br>
+                    <span class="muted">Estado: ${estado}</span>
+                </div>
+                <div>
+                    ${
+                estado === "PROGRAMADA"
+                    ? `
+                                <button class="btn ok" data-att="${id}">Atender</button>
+                                <button class="btn danger" data-del="${id}">Cancelar</button>
+                              `
+                    : estado === "ATENDIDA"
+                        ? `<a class="btn primary" href="/ver_receta.html?citaId=${id}">Ver receta</a>`
+                        : `<span class="muted">Sin acciones</span>`
+            }
+                </div>
+            `;
+
+            lista.appendChild(div);
+        });
+
+        document.querySelectorAll("[data-att]").forEach(b => {
+            b.onclick = async () => {
+                b.disabled = true;
+
+                const r = await apiFetch(`/api/citas/${b.dataset.att}/atender`, {
+                    method: "PUT"
+                });
+
+                if(r && r.ok) {
+                    location.href = `/receta.html?citaId=${b.dataset.att}`;
+                } else {
+                    b.disabled = false;
+                }
+            };
+        });
+
+        document.querySelectorAll("[data-del]").forEach(b => {
+            b.onclick = async () => {
+                b.disabled = true;
+
+                const r = await apiFetch(`/api/citas/${b.dataset.del}/cancelar`, {
+                    method: "PUT"
+                });
+
+                if(r && r.ok) await cargarCitas();
+                else b.disabled = false;
+            };
+        });
+    }
+
+    const dlg = document.getElementById("dlgNueva");
+
+    document.getElementById("btnNueva").onclick = async () => {
+        if(!DOCTOR_ID){
+            alert("No se pudo identificar al doctor. Recargue la página.");
+            return;
+        }
+
+        dlg.showModal();
+
+        document.getElementById("dlgError").textContent = "";
+        document.getElementById("nc_fecha").value = document.getElementById("fechaFiltro").value || fechaHoy();
+        document.getElementById("nc_hora").value = "";
+        document.getElementById("nc_motivo").value = "";
+
+        await loadPacientes();
+        await loadEspecialidades();
+    };
+
+    document.getElementById("dlgClose").onclick = () => dlg.close();
+    document.getElementById("dlgCancel").onclick = () => dlg.close();
+
+    document.getElementById("dlgCreate").onclick = async (e) => {
+        e.preventDefault();
+
+        const payload = {
+            fecha: document.getElementById("nc_fecha").value,
+            hora: document.getElementById("nc_hora").value,
+            pacienteId: Number(document.getElementById("nc_paciente").value),
+            especialidadId: Number(document.getElementById("nc_especialidad").value),
+            doctorId: DOCTOR_ID,
+            motivo: document.getElementById("nc_motivo").value
+        };
+
+        if(!payload.fecha || !payload.hora || !payload.pacienteId || !payload.especialidadId){
+            document.getElementById("dlgError").textContent = "Completa todos los campos.";
+            return;
+        }
+
+        const r = await apiFetch("/api/citas", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+
+        if(!r) return;
+
+        if(!r.ok){
+            let msg = "Error al crear la cita";
+
+            try {
+                const body = await r.json();
+                msg = body.message ?? body.error ?? body.detail ?? JSON.stringify(body);
+            } catch {
+                msg = await r.text().catch(() => "Error desconocido");
+            }
+
+            document.getElementById("dlgError").textContent = msg;
+            return;
+        }
+
+        dlg.close();
+
+        document.getElementById("fechaFiltro").value = payload.fecha;
+        await cargarCitas();
+    };
+
+    async function loadPacientes(){
+        const r = await apiFetch("/api/pacientes");
+        if(!r) return;
+
+        const data = await r.json();
+
+        const sel = document.getElementById("nc_paciente");
+        sel.innerHTML = data.map(p => `
+            <option value="${p.idPaciente ?? p.id}">
+                ${p.nombre} ${p.apellido ?? ""}
+            </option>
+        `).join("");
+    }
+
+    async function loadEspecialidades(){
+        const r = await apiFetch(`/api/doctores/${DOCTOR_ID}/especialidades`);
+        if(!r) return;
+
+        const data = await r.json();
+
+        const sel = document.getElementById("nc_especialidad");
+        sel.innerHTML = data.map(e => `
+            <option value="${e.idEspecialidad ?? e.id}">
+                ${e.nomEspecialidad ?? e.nombre ?? "—"}
+            </option>
+        `).join("");
+    }
+
+    document.getElementById("btnBuscar").onclick = cargarCitas;
+
+    document.getElementById("btnHoy").onclick = async () => {
+        document.getElementById("fechaFiltro").value = fechaHoy();
+        await cargarCitas();
+    };
+
+    document.getElementById("fechaFiltro").addEventListener("change", cargarCitas);
+
+    (async () => {
+        document.getElementById("fechaFiltro").value = fechaHoy();
+
+        await loadDoctor();
+
+        if(!DOCTOR_ID){
+            document.body.innerHTML =
+                "<p style='padding:2rem;color:#6b7280'>No se encontró un doctor asociado a esta cuenta.</p>";
+            return;
+        }
+
+        await cargarCitas();
+    })();
+</script>
+
+</body>
+</html>

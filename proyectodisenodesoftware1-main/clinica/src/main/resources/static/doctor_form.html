@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Doctor</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; }
+        .wrap { max-width: 800px; margin: 24px auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,.1); }
+        label { display: block; margin: 10px 0 4px; font-weight: bold; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { margin-top: 16px; padding: 10px 14px; border: none; border-radius: 8px; background: #1a56db; color: #fff; cursor: pointer; }
+        button.cancelar { background: #6c757d; margin-left: 8px; }
+        .muted { color: #6b7280; font-size: .9rem; }
+        .alert { padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; display: none; }
+        .alert.ok  { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+        .alert.err { background: #ffebee; color: #b71c1c; border: 1px solid #ef9a9a; }
+        .fab-home {
+            position: fixed; right: 20px; bottom: 20px;
+            background: #1a56db; color: #fff; border-radius: 999px;
+            padding: 12px 16px; text-decoration: none;
+            box-shadow: 0 6px 16px rgba(0,0,0,.15); z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h2 id="titulo">Editar Doctor</h2>
+
+    <div class="alert ok"  id="alertOk"></div>
+    <div class="alert err" id="alertErr"></div>
+    <div id="alertCargando" class="muted">Cargando datos…</div>
+
+    <form id="formDoctor" style="display:none">
+        <label>Nombre<input id="nombre" required maxlength="100" /></label>
+        <label>Apellido<input id="apellido" required maxlength="100" /></label>
+        <label>Teléfono<input id="telefono" maxlength="50" placeholder="+506 8888-8888" /></label>
+        <label>Dirección<input id="direccion" maxlength="150" placeholder="Provincia, cantón, distrito…" /></label>
+        <div>
+            <button type="submit">Guardar</button>
+            <button type="button" class="cancelar" id="btnCancelar">Cancelar</button>
+        </div>
+    </form>
+</div>
+
+<a class="fab-home" href="/">Menú principal</a>
+
+<script>
+    // ── JWT helpers ────────────────────────────────────────────────
+    function getToken() {
+        return localStorage.getItem('jwt_token');
+    }
+
+    function authHeaders() {
+        const token = getToken();
+        if (!token) {
+            window.location.href = '/login.html';
+            return null;
+        }
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    }
+
+    // ── Extrae el ID de la URL: /doctor/editar/5 ──────────────────
+    const partes   = location.pathname.split('/').filter(Boolean);
+    const doctorId = partes[2];
+
+    if (!doctorId || isNaN(doctorId)) {
+        document.getElementById('alertCargando').textContent = 'ID de doctor inválido.';
+    } else {
+        cargarDoctor(doctorId);
+    }
+
+    async function cargarDoctor(id) {
+        const headers = authHeaders();
+        if (!headers) return;
+        try {
+            const res = await fetch(`/api/doctores/${id}`, { headers });
+            if (res.status === 401 || res.status === 403) {
+                window.location.href = '/login.html';
+                return;
+            }
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const d = await res.json();
+
+            document.getElementById('titulo').textContent =
+                `Editar: ${d.nombre || ''} ${d.apellido || ''}`;
+            document.getElementById('nombre').value    = d.nombre    || '';
+            document.getElementById('apellido').value  = d.apellido  || '';
+            document.getElementById('telefono').value  = d.telefono  || '';
+            document.getElementById('direccion').value = d.direccion || '';
+
+            document.getElementById('alertCargando').style.display = 'none';
+            document.getElementById('formDoctor').style.display    = 'block';
+
+            document.getElementById('btnCancelar').addEventListener('click', () => {
+                location.href = `/doctor/${id}`;
+            });
+        } catch {
+            document.getElementById('alertCargando').textContent = 'No se pudo cargar el doctor.';
+        }
+    }
+
+    document.getElementById('formDoctor').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        ocultarAlertas();
+        const headers = authHeaders();
+        if (!headers) return;
+
+        const payload = {
+            nombre:    document.getElementById('nombre').value.trim(),
+            apellido:  document.getElementById('apellido').value.trim(),
+            telefono:  document.getElementById('telefono').value.trim() || null,
+            direccion: document.getElementById('direccion').value.trim() || null
+        };
+
+        try {
+            const res = await fetch('/api/doctores/me', {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (res.status === 401 || res.status === 403) {
+                window.location.href = '/login.html';
+                return;
+            }
+            if (!res.ok) {
+                const err = await res.text().catch(() => '');
+                mostrar('alertErr', err || 'No se pudo guardar los cambios.');
+                return;
+            }
+            mostrar('alertOk', 'Cambios guardados correctamente.');
+            setTimeout(() => { location.href = `/doctor/${doctorId}`; }, 1200);
+        } catch {
+            mostrar('alertErr', 'Error de conexión al guardar.');
+        }
+    });
+
+    function mostrar(id, msg) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    function ocultarAlertas() {
+        ['alertOk', 'alertErr'].forEach(id => {
+            const el = document.getElementById(id);
+            el.style.display = 'none';
+            el.textContent = '';
+        });
+    }
+</script>
+</body>
+</html>
